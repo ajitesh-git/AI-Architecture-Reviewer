@@ -1,174 +1,363 @@
 # AI Architecture Reviewer
 
-AI Architecture Reviewer is an open-source, local-first application for reviewing software architecture. Upload source/config artifacts or a `.zip` solution package, run analysis in the browser, detect architecture anti-patterns, receive improvement suggestions, and export a scorecard report.
+**AI Architecture Reviewer** is an open-source, local-first architecture review platform for engineering leaders, solution architects, and engineering managers. Upload a source-code repository or `.zip` solution package, analyze architecture structure, detect anti-patterns, inspect dependencies, and generate an architecture scorecard with actionable improvement recommendations.
 
-## Current Status
+This project is built as a real product, not a mockup: it includes a React web app, Express API, worker-thread analysis jobs, reusable analyzer package, CLI, Electron desktop shell, tests, documentation, and GitHub-ready project structure.
 
-This repository starts with a working web MVP:
+## Why This Project Stands Out
 
-- Upload multiple files or `.zip` archives.
-- Parse source, IaC, OpenAPI, YAML, JSON, and configuration artifacts locally in the browser.
-- Infer services, datastore references, and service-to-service calls.
-- Produce compact AST summaries for C#, SQL/T-SQL/proc, TypeScript, JavaScript, and JSON files.
-- Infer module, service-call, SQL table, and stored procedure dependencies from AST summaries.
-- Detect architecture anti-patterns with deterministic heuristics.
-- Merge findings from external scanners or policy tools into the same scorecard.
-- Generate risk counts, recommendations, and scorecard dimensions.
-- Export analysis as JSON or Markdown.
+- **Architecture intelligence for real repositories**: analyzes source files, config, infrastructure files, APIs, SQL, stored procedures, and zipped codebases.
+- **Local-first by design**: run analysis in the browser, through a local API, from the CLI, or inside the Electron desktop shell.
+- **Large repository support**: server mode uses background jobs, progress polling, persisted results, and paginated findings/dependency endpoints.
+- **Recruiter/interviewer friendly architecture**: monorepo, reusable core package, worker threads, API boundaries, desktop packaging, test coverage, and modular UI.
+- **No vendor lock-in**: deterministic analysis works without an AI provider; future AI integrations can be optional and provider-configurable.
 
-No backend or AI provider is required for the MVP.
+## Product Capabilities
 
-The repository now also includes a backend API for server-side analysis and persisted scan history.
+### Upload and Analyze
 
-Large zip uploads use a background job flow in server mode so the UI can show progress while the API expands and analyzes the repository.
+- Upload individual files, folders, or `.zip` solution packages.
+- Expand and scan large repositories in server mode without freezing the UI.
+- Run local browser analysis when no backend is available.
+- Analyze sample microservice architecture instantly for demos.
 
-An initial Electron desktop shell is included under `apps/desktop`. It starts the API locally and opens the existing React UI as a desktop app.
+### Architecture Understanding
+
+- Infer services, containers, modules, data stores, calls, and dependencies.
+- Build architecture views from code and configuration evidence.
+- Parse AST summaries for:
+  - C#
+  - SQL
+  - T-SQL
+  - `.proc` stored procedure files
+  - TypeScript
+  - JavaScript
+  - JSON
+
+### Anti-Pattern Detection
+
+Detects architecture and engineering risks such as:
+
+- Hardcoded secrets
+- Missing timeouts and retries
+- Synchronous service chaining
+- Shared database coupling
+- Stored procedure data coupling
+- Cyclic service dependencies
+- Overly broad API surfaces
+- Low modularity in large source artifacts
+
+### Scorecard and Recommendations
+
+- Generates score dimensions for coupling, resilience, maintainability, security, and scalability.
+- Produces an overall architecture score.
+- Shows risk summary, finding evidence, and remediation guidance.
+- Exports reports as JSON or Markdown.
+
+### Large Result UX
+
+- Dedicated pages for Overview, Findings, Architecture, Scorecard, Reports, History, and Settings.
+- Overview stays lightweight and navigates to deeper result pages instead of endlessly expanding.
+- Findings and dependencies support paginated loading.
+- Full-page result layouts include page headers, metrics, stable app chrome, and polished scorecard/architecture panels.
+
+### Desktop App
+
+- Electron desktop shell under `apps/desktop`.
+- Starts a local Express API on a dynamic localhost port.
+- Loads the React UI from the packaged web build.
+- Shares the same analyzer, API, and UI code paths as the web product.
+
+## Tech Stack
+
+| Area | Technology |
+| --- | --- |
+| Frontend | React, Vite, Lucide icons, modular CSS |
+| Backend | Node.js, Express, Multer, JSZip |
+| Background processing | Node worker threads |
+| Desktop | Electron, electron-builder |
+| CLI | Node.js workspace CLI |
+| Analyzer | Custom deterministic analyzer package |
+| Testing | Node test runner, Supertest |
+| Packaging | npm workspaces, Electron Windows packaging |
+
+## Monorepo Structure
+
+```text
+apps/
+  web/                  React + Vite web application
+  api/                  Express API, upload handling, jobs, persisted history
+  cli/                  Command-line repository and zip analyzer
+  desktop/              Electron desktop shell and packaging config
+
+packages/
+  analyzer-core/        Reusable analyzer, AST parsing, rules, scoring, reports
+
+docs/
+  architecture.md        Product architecture and extension plan
+  ast.md                 Supported language AST extraction
+  desktop.md             Electron desktop app setup
+  external-analyzers.md  Scanner import formats
+  frontend.md            Web UI file boundaries
+  rules.md               Anti-pattern rule model
+  scoring.md             Scorecard model
+
+examples/
+  sample-microservices/  Demo solution for local testing
+
+rules/
+  architecture/          Rule metadata
+
+docker/
+  web.Dockerfile         Static web image
+```
 
 ## Quick Start
 
+Requirements:
+
+- Node.js 20+
+- npm
+
+Install dependencies:
+
 ```bash
 npm install
+```
+
+Start the web app:
+
+```bash
 npm run dev
 ```
 
-Open the local URL printed by Vite, usually:
+Open:
 
 ```text
 http://127.0.0.1:5173
 ```
 
-To build the production app:
+Build production web assets:
 
 ```bash
 npm run build
 ```
 
-## API Usage
+Run tests:
 
-Start the backend service:
+```bash
+npm test
+```
+
+## Run Web + API Mode
+
+Start the API:
 
 ```bash
 npm run dev:api
 ```
 
-Analyze JSON source artifacts:
+Start the web app:
 
 ```bash
-curl -X POST http://127.0.0.1:8080/api/analyses \
-  -H "Content-Type: application/json" \
-  -d "{\"files\":[{\"name\":\"payment-service/app.js\",\"text\":\"const password = \\\"sample-secret\\\";\"}]}"
-```
-
-Analyze a zip upload:
-
-```bash
-curl -F "files=@solution.zip" http://127.0.0.1:8080/api/analyses
-```
-
-## Web + API Mode
-
-The web app can run analysis in two modes:
-
-- `Server`: sends parsed artifacts to `VITE_API_BASE_URL`, persists the scan, and shows analysis history.
-- `Local`: runs analysis fully in the browser.
-
-Start both services in separate terminals:
-
-```bash
-npm run dev:api
 npm run dev
 ```
 
-Set a custom API URL with:
+The web UI supports:
+
+- **Server mode**: uploads to the API, creates a background analysis job, persists results, and loads paginated findings/dependencies.
+- **Local mode**: analyzes supported files directly in the browser.
+
+Set a custom API URL:
 
 ```bash
 VITE_API_BASE_URL=http://127.0.0.1:8080 npm run dev
 ```
 
+On Windows PowerShell:
+
+```powershell
+$env:VITE_API_BASE_URL="http://127.0.0.1:8080"
+npm run dev
+```
+
+## API Examples
+
+Health check:
+
+```bash
+curl http://127.0.0.1:8080/health
+```
+
+Create a background analysis job from JSON source artifacts:
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/analysis-jobs \
+  -H "Content-Type: application/json" \
+  -d "{\"files\":[{\"name\":\"payment-service/app.js\",\"size\":42,\"text\":\"const password = \\\"sample-secret\\\";\"}]}"
+```
+
+Create a background analysis job from a zip upload:
+
+```bash
+curl -F "files=@solution.zip" http://127.0.0.1:8080/api/analysis-jobs
+```
+
+Poll job status:
+
+```bash
+curl http://127.0.0.1:8080/api/analysis-jobs/{jobId}
+```
+
+Fetch completed result:
+
+```bash
+curl http://127.0.0.1:8080/api/analysis-jobs/{jobId}/result
+```
+
+Fetch paginated findings:
+
+```bash
+curl "http://127.0.0.1:8080/api/analyses/{analysisId}/findings?page=1&pageSize=50"
+```
+
+Fetch paginated dependencies:
+
+```bash
+curl "http://127.0.0.1:8080/api/analyses/{analysisId}/dependencies?page=1&pageSize=50"
+```
+
 ## CLI Usage
 
-Analyze a local folder or `.zip` file from the terminal:
+Analyze a folder:
 
 ```bash
 npm run analyze -- examples/sample-microservices --format markdown --out report.md
 ```
 
-Merge external analyzer output into the architecture report:
+Analyze a zip:
+
+```bash
+npm run analyze -- solution.zip --format json --out report.json
+```
+
+Merge external scanner output:
 
 ```bash
 npm run analyze -- solution.zip --external-report semgrep.json --format markdown --out report.md
 ```
 
-Supported formats:
+Supported output formats:
 
 - `json`
 - `markdown`
 
 If `--out` is omitted, the report is printed to stdout.
 
-## Repository Layout
+## Desktop App
+
+Start the desktop shell in development:
+
+```bash
+npm run dev:desktop
+```
+
+Build the web app and package the desktop app:
+
+```bash
+npm run build:desktop
+```
+
+The packaged Windows app is generated under:
 
 ```text
-apps/
-  web/                  React + Vite web application
-  api/                  Express API for server-side analysis and persisted history
-  cli/                  Node CLI for local folder and zip analysis
-  desktop/              Electron shell for local desktop packaging
-packages/
-  analyzer-core/        Reusable analyzer, scoring, rules, reports, tests
-docs/
-  architecture.md        Product architecture and extension plan
-  ast.md                 Supported language AST extraction
-  external-analyzers.md  External scanner import formats
-  desktop.md             Electron desktop app setup
-  frontend.md            Web app file boundaries
-  rules.md               Anti-pattern rule model
-  scoring.md             Scorecard model
-examples/
-  sample-microservices/  Example solution for testing uploads
-rules/
-  architecture/          Initial rule metadata
-docker/
-  web.Dockerfile         Static web image
+apps/desktop/release/
 ```
+
+See [docs/desktop.md](docs/desktop.md) for desktop architecture, packaging notes, and hardening tasks.
 
 ## Supported Inputs
 
-The MVP reads text-like architecture and engineering artifacts:
+The analyzer reads text-like software architecture and engineering artifacts:
 
-- `.zip` files
-- Source files such as `.cs`, `.js`, `.ts`, `.java`, `.py`
-- OpenAPI/Swagger files
-- YAML/JSON/XML config
+- `.zip` repositories
+- `.cs`, `.js`, `.ts`, `.java`, `.py`
+- `.sql`, `.proc`, T-SQL scripts
+- OpenAPI and Swagger files
+- YAML, JSON, XML configuration
 - Terraform and cloud templates
-- PlantUML or architecture diagrams as text
+- PlantUML and architecture diagrams as text
+- External scanner JSON reports
 
-Binary files are skipped during zip expansion.
+Binary files and ignored folders are skipped during zip expansion.
 
-## Initial Anti-Patterns
+## External Scanner Reports
 
-- Hardcoded secrets
-- Missing timeouts and retries
-- Synchronous service chaining
-- Shared database coupling
-- Overly broad API surfaces
-- Low modularity in large source artifacts
+Scanner reports can be merged into the architecture scorecard. The importer supports generic findings and common report shapes from tools such as:
 
-See [docs/rules.md](docs/rules.md) for the rule model.
+- Semgrep
+- Spectral
+- Checkov
+- Custom policy engines
 
-## Privacy
+See [docs/external-analyzers.md](docs/external-analyzers.md).
 
-The current MVP performs analysis locally in the browser. Uploaded code is not sent to a server or AI provider.
+## Privacy and Security
 
-Future AI integrations should be opt-in, provider-configurable, and documented clearly.
+- Browser local mode keeps analysis inside the browser.
+- Desktop mode starts a local API on `127.0.0.1` and stores results in the app data folder.
+- Server mode sends files only to the API endpoint you configure.
+- No AI provider is required for deterministic analysis.
+- Future AI-assisted review should be opt-in, provider-configurable, and documented clearly.
+
+## Engineering Highlights
+
+This repository demonstrates product-minded full-stack engineering:
+
+- Clean monorepo boundaries with npm workspaces.
+- Shared analyzer core reused by web, API, CLI, and desktop.
+- Background worker-thread analysis for large repositories.
+- Paginated result APIs for large findings and dependency sets.
+- Electron desktop shell using the same production UI/API paths.
+- GitHub-ready docs, roadmap, contributing guide, security policy, and license.
+- Test coverage for analyzer, API, CLI, pagination, and background jobs.
+
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [AST extraction](docs/ast.md)
+- [Desktop app](docs/desktop.md)
+- [External analyzers](docs/external-analyzers.md)
+- [Frontend boundaries](docs/frontend.md)
+- [Rules](docs/rules.md)
+- [Scoring](docs/scoring.md)
+- [Roadmap](ROADMAP.md)
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md).
+Near-term priorities:
+
+- Desktop release readiness: installer branding, icons, signing, release assets.
+- Better Findings page UX: search, filters, selected-row persistence, pagination controls.
+- Large-repository diagnostics: cancellation, skipped-file summaries, memory/progress visibility.
+- Optional AI-assisted review: provider interface, OpenAI/Azure OpenAI/Ollama adapters, ADR suggestions.
+- Repository integrations: GitHub, GitLab, Azure DevOps.
+
+## SEO Keywords
+
+AI architecture reviewer, software architecture review tool, architecture scorecard, codebase analysis, architecture anti-pattern detection, engineering manager dashboard, solution architecture analyzer, microservices dependency analysis, technical debt analysis, repository analyzer, open-source architecture governance, Electron desktop architecture tool, React Express Node.js architecture analysis.
 
 ## Contributing
 
 Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Useful commands:
+
+```bash
+npm install
+npm test
+npm run build
+```
 
 ## License
 
