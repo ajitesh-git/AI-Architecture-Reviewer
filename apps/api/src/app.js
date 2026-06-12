@@ -9,7 +9,8 @@ import {
   createMarkdownReport,
   createSourceFile,
   isIgnoredPath,
-  isSupportedTextArtifact
+  isSupportedTextArtifact,
+  normalizeExternalReport
 } from '@ai-architecture-reviewer/analyzer-core';
 import { createFileStorage } from './storage.js';
 
@@ -51,6 +52,15 @@ async function sourceFilesFromRequest(req) {
   return [];
 }
 
+function externalFindingsFromRequest(req) {
+  const directFindings = Array.isArray(req.body?.externalFindings) ? req.body.externalFindings : [];
+  const reports = Array.isArray(req.body?.externalReports) ? req.body.externalReports : [];
+  return [
+    ...directFindings,
+    ...reports.flatMap((report, index) => normalizeExternalReport(report, `external-report-${index + 1}`))
+  ];
+}
+
 export function createApp(options = {}) {
   const app = express();
   const storage = options.storage || createFileStorage(options.storageDir || path.resolve('storage'));
@@ -70,7 +80,8 @@ export function createApp(options = {}) {
         return;
       }
 
-      const analysis = analyzeSolution(sourceFiles);
+      const externalFindings = externalFindingsFromRequest(req);
+      const analysis = analyzeSolution(sourceFiles, { externalFindings });
       const record = await storage.saveAnalysis(analysis);
       res.status(201).json(record);
     } catch (error) {

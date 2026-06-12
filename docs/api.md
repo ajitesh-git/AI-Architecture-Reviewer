@@ -46,6 +46,37 @@ Multipart upload:
 curl -F "files=@solution.zip" http://127.0.0.1:8080/api/analyses
 ```
 
+With external analyzer findings:
+
+```http
+POST /api/analyses
+Content-Type: application/json
+
+{
+  "files": [
+    {
+      "name": "payment-service/app.js",
+      "text": "fetch(\"http://inventory-service/reserve\");"
+    }
+  ],
+  "externalReports": [
+    {
+      "findings": [
+        {
+          "ruleId": "adr-missing",
+          "severity": "High",
+          "name": "Missing Architecture Decision Record",
+          "where": "docs/architecture.md",
+          "recommendation": "Capture material architecture decisions as ADRs."
+        }
+      ]
+    }
+  ]
+}
+```
+
+The API also accepts `externalFindings` when callers already normalized findings. `externalReports` supports generic findings plus Semgrep-like, Spectral-like, and Checkov-like JSON shapes.
+
 ### List Analyses
 
 ```http

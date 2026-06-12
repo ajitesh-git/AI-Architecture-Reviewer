@@ -66,6 +66,36 @@ test('creates and retrieves analysis from JSON source files', async () => {
   assert.match(reportResponse.text, /Architecture Review Report/);
 });
 
+test('creates analysis with external scanner findings', async () => {
+  const app = createApp({ storage: createMemoryStorage() });
+  const response = await request(app)
+    .post('/api/analyses')
+    .send({
+      files: [
+        {
+          name: 'order-service/app.js',
+          text: 'fetch("http://payment-service/api/payments");'
+        }
+      ],
+      externalReports: [
+        {
+          findings: [
+            {
+              ruleId: 'adr-missing',
+              severity: 'High',
+              name: 'Missing Architecture Decision Record',
+              where: 'docs/architecture.md',
+              recommendation: 'Capture material architecture decisions as ADRs.'
+            }
+          ]
+        }
+      ]
+    });
+
+  assert.equal(response.status, 201);
+  assert.ok(response.body.analysis.findings.some((finding) => finding.ruleId === 'adr-missing'));
+});
+
 test('rejects empty analysis request', async () => {
   const app = createApp({ storage: createMemoryStorage() });
   const response = await request(app).post('/api/analyses').send({ files: [] });

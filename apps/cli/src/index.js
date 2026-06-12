@@ -10,7 +10,8 @@ import {
   createMarkdownReport,
   createSourceFile,
   isIgnoredPath,
-  isSupportedTextArtifact
+  isSupportedTextArtifact,
+  normalizeExternalReport
 } from '@ai-architecture-reviewer/analyzer-core';
 
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
@@ -19,22 +20,24 @@ function usage() {
   return `AI Architecture Reviewer CLI
 
 Usage:
-  npm run analyze -- <path> [--format json|markdown] [--out report.json|report.md]
+  npm run analyze -- <path> [--format json|markdown] [--out report.json|report.md] [--external-report scanner.json]
 
 Examples:
   npm run analyze -- examples/sample-microservices --format markdown --out report.md
   npm run analyze -- solution.zip --format json
+  npm run analyze -- solution.zip --external-report semgrep.json --format markdown
 `;
 }
 
 function parseArgs(argv) {
   const args = [...argv];
-  const options = { format: 'json', out: null, target: null };
+  const options = { externalReports: [], format: 'json', out: null, target: null };
   while (args.length) {
     const arg = args.shift();
     if (arg === '--help' || arg === '-h') options.help = true;
     else if (arg === '--format') options.format = args.shift();
     else if (arg === '--out') options.out = args.shift();
+    else if (arg === '--external-report') options.externalReports.push(args.shift());
     else if (!options.target) options.target = arg;
     else throw new Error(`Unexpected argument: ${arg}`);
   }
@@ -42,6 +45,18 @@ function parseArgs(argv) {
     throw new Error('--format must be json or markdown');
   }
   return options;
+}
+
+async function loadExternalFindings(reportPaths) {
+  const commandRoot = process.env.INIT_CWD || process.cwd();
+  const nested = [];
+  for (const reportPath of reportPaths.filter(Boolean)) {
+    const resolved = path.isAbsolute(reportPath) ? reportPath : path.resolve(commandRoot, reportPath);
+    const raw = await fs.readFile(resolved, 'utf8');
+    const parsed = JSON.parse(raw);
+    nested.push(...normalizeExternalReport(parsed, path.basename(reportPath, path.extname(reportPath))));
+  }
+  return nested;
 }
 
 async function collectPath(targetPath, rootPath = targetPath) {
@@ -97,7 +112,8 @@ async function main() {
     throw new Error('No supported text artifacts found to analyze.');
   }
 
-  const analysis = analyzeSolution(sourceFiles);
+  const externalFindings = await loadExternalFindings(options.externalReports);
+  const analysis = analyzeSolution(sourceFiles, { externalFindings });
   const report = options.format === 'markdown'
     ? createMarkdownReport(analysis)
     : createJsonReport(analysis);

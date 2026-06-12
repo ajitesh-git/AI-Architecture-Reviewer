@@ -10,6 +10,7 @@ This repository starts with a working web MVP:
 - Parse source, IaC, OpenAPI, YAML, JSON, and configuration artifacts locally in the browser.
 - Infer services, datastore references, and service-to-service calls.
 - Detect architecture anti-patterns with deterministic heuristics.
+- Merge findings from external scanners or policy tools into the same scorecard.
 - Generate risk counts, recommendations, and scorecard dimensions.
 - Export analysis as JSON or Markdown.
 
@@ -86,6 +87,12 @@ Analyze a local folder or `.zip` file from the terminal:
 npm run analyze -- examples/sample-microservices --format markdown --out report.md
 ```
 
+Merge external analyzer output into the architecture report:
+
+```bash
+npm run analyze -- solution.zip --external-report semgrep.json --format markdown --out report.md
+```
+
 Supported formats:
 
 - `json`
@@ -104,6 +111,7 @@ packages/
   analyzer-core/        Reusable analyzer, scoring, rules, reports, tests
 docs/
   architecture.md        Product architecture and extension plan
+  external-analyzers.md  External scanner import formats
   frontend.md            Web app file boundaries
   rules.md               Anti-pattern rule model
   scoring.md             Scorecard model

@@ -7,7 +7,8 @@ import {
   extractCalls,
   inferServiceName,
   isIgnoredPath,
-  isSupportedTextArtifact
+  isSupportedTextArtifact,
+  normalizeExternalReport
 } from '../src/index.js';
 
 test('infers service name from common path segments', () => {
@@ -41,4 +42,32 @@ test('identifies ignored and unsupported artifacts', () => {
   assert.equal(isIgnoredPath('src/index.js'), false);
   assert.equal(isSupportedTextArtifact('diagram.png'), false);
   assert.equal(isSupportedTextArtifact('infra/main.tf'), true);
+});
+
+test('imports external analyzer findings into scorecard', () => {
+  const externalFindings = normalizeExternalReport({
+    results: [
+      {
+        check_id: 'semgrep.javascript.express.security.audit.express-open-redirect',
+        path: 'apps/api/src/routes.js',
+        extra: {
+          severity: 'ERROR',
+          message: 'Possible open redirect from user-controlled input.',
+          metadata: {
+            impact: 'High',
+            confidence: 'Medium',
+            recommendation: 'Validate redirect targets against an allow list.'
+          }
+        }
+      }
+    ]
+  }, 'semgrep');
+
+  const analysis = analyzeSolution(SAMPLE_FILES, { externalFindings });
+  const imported = analysis.findings.find((finding) => finding.source === 'semgrep');
+
+  assert.equal(imported.severity, 'Critical');
+  assert.equal(imported.where, 'apps/api/src/routes.js');
+  assert.match(imported.evidence, /open redirect/);
+  assert.ok(analysis.recommendations.some((recommendation) => recommendation.source === 'semgrep'));
 });
