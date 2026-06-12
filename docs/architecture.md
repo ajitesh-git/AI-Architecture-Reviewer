@@ -41,6 +41,12 @@ Redis backs queue/cache behavior.
 - analysis history
 - JSON and Markdown report endpoints
 
+## Desktop Slice
+
+`apps/desktop` is an Electron shell that starts the existing Express API inside the Electron main process and loads the existing React UI. The desktop app stores API data under Electron's `userData` folder and passes the dynamic local API URL to the renderer through a minimal preload bridge.
+
+This keeps the desktop version aligned with the web/API product instead of creating a separate code path.
+
 ## Package Direction
 
 Analyzer logic now lives in `packages/analyzer-core` so the same engine can be reused by the browser app, a future backend worker, or a CLI.

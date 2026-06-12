@@ -10,7 +10,9 @@
   "scripts": {
     "dev": "npm run dev -w apps/web",
     "dev:api": "npm run dev -w apps/api",
+    "dev:desktop": "npm run dev -w apps/desktop",
     "build": "npm run build -w apps/web",
+    "build:desktop": "npm run build && npm run pack -w apps/desktop",
     "preview": "npm run preview -w apps/web",
     "test": "npm test --workspaces --if-present",
     "analyze": "npm run analyze -w apps/cli --"

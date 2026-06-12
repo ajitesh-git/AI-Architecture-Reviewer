@@ -22,6 +22,8 @@ The repository now also includes a backend API for server-side analysis and pers
 
 Large zip uploads use a background job flow in server mode so the UI can show progress while the API expands and analyzes the repository.
 
+An initial Electron desktop shell is included under `apps/desktop`. It starts the API locally and opens the existing React UI as a desktop app.
+
 ## Quick Start
 
 ```bash
@@ -111,12 +113,14 @@ apps/
   web/                  React + Vite web application
   api/                  Express API for server-side analysis and persisted history
   cli/                  Node CLI for local folder and zip analysis
+  desktop/              Electron shell for local desktop packaging
 packages/
   analyzer-core/        Reusable analyzer, scoring, rules, reports, tests
 docs/
   architecture.md        Product architecture and extension plan
   ast.md                 Supported language AST extraction
   external-analyzers.md  External scanner import formats
+  desktop.md             Electron desktop app setup
   frontend.md            Web app file boundaries
   rules.md               Anti-pattern rule model
   scoring.md             Scorecard model
