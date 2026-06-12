@@ -11,13 +11,17 @@ import { FindingsTable } from './features/findings/FindingsTable';
 import { RiskSummary } from './features/findings/RiskSummary';
 import { HistoryPanel } from './features/history/HistoryPanel';
 import { Improvements } from './features/recommendations/Improvements';
+import { ExternalReportsPanel } from './features/upload/ExternalReportsPanel';
 import { UploadPanel } from './features/upload/UploadPanel';
 import { API_BASE_URL, createServerAnalysis, fetchAnalysisHistory, fetchAnalysisRecord } from './services/apiClient';
+import { readExternalReports } from './services/externalReports';
 import { expandUploads } from './services/uploadReader';
 
 export function App() {
   const [tab, setTab] = useState('Overview');
   const [sourceFiles, setSourceFiles] = useState([]);
+  const [externalReports, setExternalReports] = useState([]);
+  const [externalFindings, setExternalFindings] = useState([]);
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -43,6 +47,24 @@ export function App() {
     setError('');
     setSelectedFindingId(null);
     setLoading(false);
+  }
+
+  async function handleExternalReports(fileList) {
+    if (!fileList?.length) return;
+    setLoading(true);
+    setError('');
+    try {
+      const imported = await readExternalReports([...fileList]);
+      setExternalReports((current) => [...current, ...imported.reports]);
+      setExternalFindings((current) => [...current, ...imported.findings]);
+      setAnalysis(null);
+      setSelectedFindingId(null);
+      setProgress(0);
+    } catch (err) {
+      setError(`Could not read scanner report: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function refreshHistory() {
@@ -72,15 +94,15 @@ export function App() {
     }
   }
 
-  function completeLocalAnalysis(files) {
-    const nextAnalysis = analyzeSolution(files);
+  function completeLocalAnalysis(files, importedFindings = externalFindings) {
+    const nextAnalysis = analyzeSolution(files, { externalFindings: importedFindings });
     setAnalysis(nextAnalysis);
     setSelectedFindingId(nextAnalysis.findings[0]?.id || null);
     setAnalyzing(false);
     setApiStatus('Completed locally in browser');
   }
 
-  function runAnalysis(files = sourceFiles) {
+  function runAnalysis(files = sourceFiles, importedFindings = externalFindings) {
     if (!files.length) return;
     setAnalyzing(true);
     setError('');
@@ -90,7 +112,7 @@ export function App() {
       setProgress(value);
       if (value === 100) {
         if (runMode === 'server') {
-          createServerAnalysis(files)
+          createServerAnalysis(files, importedFindings)
             .then((record) => {
               setAnalysis(record.analysis);
               setSelectedFindingId(record.analysis.findings[0]?.id || null);
@@ -99,11 +121,11 @@ export function App() {
             })
             .catch((err) => {
               setError(`Server analysis failed: ${err.message}`);
-              completeLocalAnalysis(files);
+              completeLocalAnalysis(files, importedFindings);
             })
             .finally(() => setAnalyzing(false));
         } else {
-          completeLocalAnalysis(files);
+          completeLocalAnalysis(files, importedFindings);
         }
       }
     }, 240 + index * 260));
@@ -111,6 +133,8 @@ export function App() {
 
   function loadSample() {
     setSourceFiles(SAMPLE_FILES);
+    setExternalReports([]);
+    setExternalFindings([]);
     setAnalysis(null);
     setSelectedFindingId(null);
     setProgress(0);
@@ -119,6 +143,8 @@ export function App() {
 
   function clearAll() {
     setSourceFiles([]);
+    setExternalReports([]);
+    setExternalFindings([]);
     setAnalysis(null);
     setSelectedFindingId(null);
     setProgress(0);
@@ -142,7 +168,16 @@ export function App() {
         <div className="content">
           <div className="main-column">
             <div className="top-grid">
-              <UploadPanel sourceFiles={sourceFiles} onFiles={handleFiles} onSample={loadSample} onClear={clearAll} loading={loading} />
+              <div className="ingest-column">
+                <UploadPanel sourceFiles={sourceFiles} onFiles={handleFiles} onSample={loadSample} onClear={clearAll} loading={loading} />
+                <ExternalReportsPanel externalReports={externalReports} externalFindings={externalFindings} onReports={handleExternalReports} onClear={() => {
+                  setExternalReports([]);
+                  setExternalFindings([]);
+                  setAnalysis(null);
+                  setSelectedFindingId(null);
+                  setProgress(0);
+                }} />
+              </div>
               <ArchitectureView analysis={analysis} />
               <AnalyzePanel analysis={analysis} sourceFiles={sourceFiles} analyzing={analyzing} progress={progress} onAnalyze={() => runAnalysis()} runMode={runMode} setRunMode={setRunMode} apiStatus={apiStatus} error={error} />
             </div>

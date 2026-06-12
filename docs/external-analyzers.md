@@ -9,6 +9,10 @@ AI Architecture Reviewer has deterministic built-in architecture heuristics, but
 - Spectral-like `results` arrays with `code`, `path`, `message`, and numeric `severity`.
 - Checkov-like `results.failed_checks`.
 
+## Web App
+
+Upload scanner JSON in the Scanner Reports panel after uploading solution artifacts. Server mode sends imported findings to the API. Local mode scores the same findings in the browser.
+
 ## CLI
 
 ```bash
@@ -43,4 +47,4 @@ npm run analyze -- solution.zip --external-report semgrep.json --external-report
 
 ## Why This Matters
 
-This is the practical path for reducing today’s analyzer limitation without pretending one heuristic engine can understand every stack. The product can now start as an architecture reviewer and become an orchestration layer for more specialized analyzers.
+This is the practical path for reducing today's analyzer limitation without pretending one heuristic engine can understand every stack. The product can now start as an architecture reviewer and become an orchestration layer for more specialized analyzers.
