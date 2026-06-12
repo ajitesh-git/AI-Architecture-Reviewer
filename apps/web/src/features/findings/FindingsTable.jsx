@@ -1,7 +1,7 @@
 import { AlertTriangle, ChevronDown, ChevronRight, Download, Filter } from 'lucide-react';
 import { downloadReport } from '../../services/reportDownload';
 
-export function FindingsTable({ findings, analysis }) {
+export function FindingsTable({ findings, analysis, selectedFindingId, onSelectFinding }) {
   const visible = findings.slice(0, 8);
   return (
     <section className="panel table-panel">
@@ -19,14 +19,19 @@ export function FindingsTable({ findings, analysis }) {
         </thead>
         <tbody>
           {visible.map((finding) => (
-            <tr key={finding.id} title={finding.evidence}>
+            <tr
+              className={selectedFindingId === finding.id ? 'selected-row' : ''}
+              key={finding.id}
+              title={finding.evidence}
+              onClick={() => onSelectFinding(finding)}
+            >
               <td><input type="checkbox" /></td>
               <td><span className={`severity ${finding.severity.toLowerCase()}`}><AlertTriangle size={13} />{finding.severity}</span></td>
               <td>{finding.name}</td>
               <td>{finding.where}</td>
               <td>{finding.impact}</td>
               <td>{finding.confidence}</td>
-              <td><ChevronRight size={16} /></td>
+              <td><button className="row-action" aria-label={`Open ${finding.name}`}><ChevronRight size={16} /></button></td>
             </tr>
           ))}
           {visible.length === 0 && <tr><td colSpan="7" className="empty-cell">No anti-patterns detected yet.</td></tr>}

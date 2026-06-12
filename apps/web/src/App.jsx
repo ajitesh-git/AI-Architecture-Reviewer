@@ -6,6 +6,7 @@ import { TopBar } from './components/layout/TopBar';
 import { Scorecard } from './components/score/Scorecard';
 import { AnalyzePanel } from './features/analysis/AnalyzePanel';
 import { ArchitectureView } from './features/architecture/ArchitectureView';
+import { FindingDetailPanel } from './features/findings/FindingDetailPanel';
 import { FindingsTable } from './features/findings/FindingsTable';
 import { RiskSummary } from './features/findings/RiskSummary';
 import { HistoryPanel } from './features/history/HistoryPanel';
@@ -26,9 +27,11 @@ export function App() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [apiStatus, setApiStatus] = useState(`Server: ${API_BASE_URL}`);
   const [error, setError] = useState('');
+  const [selectedFindingId, setSelectedFindingId] = useState(null);
 
   const findings = analysis?.findings || [];
   const recommendations = analysis?.recommendations || [];
+  const selectedFinding = findings.find((finding) => finding.id === selectedFindingId) || findings[0] || null;
 
   async function handleFiles(fileList) {
     if (!fileList?.length) return;
@@ -38,6 +41,7 @@ export function App() {
     setAnalysis(null);
     setProgress(0);
     setError('');
+    setSelectedFindingId(null);
     setLoading(false);
   }
 
@@ -60,6 +64,7 @@ export function App() {
       const record = await fetchAnalysisRecord(id);
       setAnalysis(record.analysis);
       setSourceFiles(record.analysis.files);
+      setSelectedFindingId(record.analysis.findings[0]?.id || null);
       setProgress(100);
       setApiStatus(`Loaded server analysis ${record.id}`);
     } catch (err) {
@@ -68,7 +73,9 @@ export function App() {
   }
 
   function completeLocalAnalysis(files) {
-    setAnalysis(analyzeSolution(files));
+    const nextAnalysis = analyzeSolution(files);
+    setAnalysis(nextAnalysis);
+    setSelectedFindingId(nextAnalysis.findings[0]?.id || null);
     setAnalyzing(false);
     setApiStatus('Completed locally in browser');
   }
@@ -86,6 +93,7 @@ export function App() {
           createServerAnalysis(files)
             .then((record) => {
               setAnalysis(record.analysis);
+              setSelectedFindingId(record.analysis.findings[0]?.id || null);
               setApiStatus(`Saved server analysis ${record.id}`);
               return refreshHistory();
             })
@@ -104,6 +112,7 @@ export function App() {
   function loadSample() {
     setSourceFiles(SAMPLE_FILES);
     setAnalysis(null);
+    setSelectedFindingId(null);
     setProgress(0);
     setTimeout(() => runAnalysis(SAMPLE_FILES), 50);
   }
@@ -111,6 +120,7 @@ export function App() {
   function clearAll() {
     setSourceFiles([]);
     setAnalysis(null);
+    setSelectedFindingId(null);
     setProgress(0);
     setAnalyzing(false);
     setError('');
@@ -137,12 +147,13 @@ export function App() {
               <AnalyzePanel analysis={analysis} sourceFiles={sourceFiles} analyzing={analyzing} progress={progress} onAnalyze={() => runAnalysis()} runMode={runMode} setRunMode={setRunMode} apiStatus={apiStatus} error={error} />
             </div>
             <div className="bottom-grid">
-              <FindingsTable findings={findings} analysis={analysis} />
+              <FindingsTable findings={findings} analysis={analysis} selectedFindingId={selectedFinding?.id} onSelectFinding={(finding) => setSelectedFindingId(finding.id)} />
               <Improvements recommendations={recommendations} />
             </div>
           </div>
           <aside className="right-column">
             <Scorecard analysis={analysis} />
+            <FindingDetailPanel analysis={analysis} finding={selectedFinding} />
             <RiskSummary findings={findings} />
             <HistoryPanel history={history} loading={historyLoading} onRefresh={refreshHistory} onOpen={openHistoryRecord} />
           </aside>

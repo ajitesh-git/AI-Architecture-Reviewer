@@ -13,6 +13,7 @@ apps/web/src/
     analysis/                analysis controls and execution status
     architecture/            architecture graph preview
     findings/                findings table and risk summary
+                              finding detail panel and selected finding workflow
     history/                 persisted server scan history
     recommendations/         improvement recommendation panel
     upload/                  upload and sample-loading panel

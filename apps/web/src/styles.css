@@ -708,6 +708,25 @@ td {
   color: #223048;
 }
 
+tbody tr {
+  cursor: pointer;
+}
+
+tbody tr.selected-row {
+  background: #f5f9ff;
+  box-shadow: inset 3px 0 0 #075dec;
+}
+
+.row-action {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: #20314b;
+  display: grid;
+  place-items: center;
+}
+
 .empty-cell {
   text-align: center;
   color: #657187;
@@ -804,7 +823,7 @@ input[type="checkbox"] {
   align-content: start;
 }
 
-.scorecard, .risk-summary, .history-panel {
+.scorecard, .risk-summary, .history-panel, .finding-detail {
   border-radius: 8px;
   padding: 20px;
 }
@@ -905,6 +924,115 @@ input[type="checkbox"] {
   color: #2f3c52;
 }
 .total strong { color: #075dec; }
+
+.finding-detail {
+  display: grid;
+  gap: 18px;
+}
+
+.detail-heading {
+  display: grid;
+  gap: 8px;
+}
+
+.detail-heading h2 {
+  font-size: 18px;
+}
+
+.detail-heading p {
+  margin: 0;
+  color: #657187;
+  font-size: 13px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid #e2e7ef;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.detail-grid div {
+  min-height: 62px;
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+  border-right: 1px solid #e2e7ef;
+}
+
+.detail-grid div:last-child {
+  border-right: 0;
+}
+
+.detail-grid span {
+  color: #657187;
+  font-size: 11px;
+}
+
+.detail-grid strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.detail-section {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid #e2e7ef;
+  padding-top: 14px;
+}
+
+.detail-section h3 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.detail-section p {
+  margin: 0;
+  color: #3f4d64;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.detail-section code {
+  color: #075dec;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.detail-section pre {
+  max-height: 170px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  border-radius: 6px;
+  background: #f6f8fb;
+  color: #243047;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.empty-detail {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  color: #657187;
+  text-align: center;
+}
+
+.empty-detail p {
+  max-width: 220px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
 
 .history-panel {
   min-height: 280px;
