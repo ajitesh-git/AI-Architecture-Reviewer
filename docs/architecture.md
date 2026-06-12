@@ -56,3 +56,5 @@ Future packages should add shared API contracts and report rendering beyond the 
 ## AST Layer
 
 `packages/analyzer-core/src/ast` owns language-aware AST extraction. It currently produces compact, browser-safe AST summaries for C#, SQL, T-SQL, stored procedure scripts, TypeScript, JavaScript, and JSON. The AST layer is intentionally separated from scoring rules so future parser upgrades can happen one language at a time without rewriting the API, CLI, or UI contracts.
+
+`packages/analyzer-core/src/dependencyInference.js` converts AST nodes into architecture signals such as module dependencies, service calls, SQL table dependencies, and stored procedure dependencies. The analyzer still keeps text fallback for early MVP coverage, but AST-derived signals are now part of the primary analysis model.

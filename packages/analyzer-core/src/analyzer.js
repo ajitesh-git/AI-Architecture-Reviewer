@@ -1,4 +1,5 @@
 import { createRuleFinding } from './findings.js';
+import { extractAstDependencies, extractCallsFromAst, extractDatastoresFromAst } from './dependencyInference.js';
 import { extractCalls, inferDatastores, inferServiceName } from './graphInference.js';
 import { normalizeExternalFindings } from './externalFindings.js';
 import { parseSourceAsts } from './ast/index.js';
@@ -10,20 +11,27 @@ export function analyzeSolution(sourceFiles, options = {}) {
   const services = new Map();
   const datastoresByService = new Map();
   const edges = [];
+  const dependencies = [];
   const findings = [];
+  const asts = parseSourceAsts(readable);
+  const astByFile = new Map(asts.map((ast) => [ast.file, ast]));
 
   readable.forEach((file) => {
     const service = inferServiceName(file.name);
+    const ast = astByFile.get(file.name);
     if (!services.has(service)) services.set(service, { name: service, files: 0, lines: 0, calls: 0 });
     const stats = services.get(service);
     stats.files += 1;
     stats.lines += file.text.split(/\r?\n/).length;
 
-    const stores = inferDatastores(file.text);
+    const stores = [...new Set([...inferDatastores(file.text), ...extractDatastoresFromAst(ast)])];
     if (!datastoresByService.has(service)) datastoresByService.set(service, new Set());
     stores.forEach((store) => datastoresByService.get(service).add(store));
 
-    const calls = extractCalls(file.text);
+    const astDependencies = extractAstDependencies(ast, service);
+    dependencies.push(...astDependencies);
+
+    const calls = [...new Set([...extractCalls(file.text), ...extractCallsFromAst(ast)])];
     stats.calls += calls.length;
     calls.forEach((target) => edges.push({ from: service, to: target.replace(/^https?:\/\//, '').split(/[/:]/)[0] }));
 
@@ -89,7 +97,6 @@ export function analyzeSolution(sourceFiles, options = {}) {
 
   const importedFindings = normalizeExternalFindings(options.externalFindings || [], 'external');
   findings.push(...importedFindings);
-  const asts = parseSourceAsts(readable);
 
   const scores = calculateScores({ findings, edges, serviceCount: services.size });
   const recommendations = createRecommendations(findings);
@@ -98,6 +105,7 @@ export function analyzeSolution(sourceFiles, options = {}) {
     files: sourceFiles,
     services: [...services.values()],
     asts,
+    dependencies,
     datastores: [...new Set([...datastoresByService.values()].flatMap((set) => [...set]))],
     edges,
     findings,

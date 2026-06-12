@@ -39,6 +39,17 @@ Each analyzed text artifact gets an `asts[]` entry:
 }
 ```
 
+## Dependency Inference
+
+The analyzer now uses AST nodes before text fallback when building architecture signals:
+
+- JS/TS `ImportDeclaration` and `RequireCall` nodes can produce module dependencies.
+- C# `InvocationExpression` nodes can produce call dependencies when names indicate service/client boundaries.
+- SQL/T-SQL/proc `TableReference` nodes produce datastore dependencies.
+- SQL/T-SQL/proc `ProcedureCall` nodes produce stored procedure dependencies.
+
+These inferred dependencies are returned in `analysis.dependencies[]` with `from`, `to`, `type`, `via`, `file`, and optional `line`.
+
 ## Current Parser Strategy
 
 The current implementation is dependency-free and browser-compatible:
@@ -49,4 +60,3 @@ The current implementation is dependency-free and browser-compatible:
 - SQL, T-SQL, and procedure scripts emit statement, table reference, procedure declaration, procedure call, and function declaration nodes.
 
 This establishes a stable AST contract first. Later parser upgrades can replace individual language adapters with Roslyn, Tree-sitter, Babel, TypeScript compiler API, or SQL dialect parsers while preserving the same analyzer output.
-

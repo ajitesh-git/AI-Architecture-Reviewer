@@ -97,3 +97,26 @@ test('parses AST summaries for supported language set', () => {
   assert.ok(byFile.get('web/app.ts').nodes.some((node) => node.type === 'InterfaceDeclaration'));
   assert.ok(byFile.get('db/load.proc').nodes.some((node) => node.type === 'ProcedureDeclaration'));
 });
+
+test('uses AST nodes to infer architecture dependencies', () => {
+  const analysis = analyzeSolution([
+    {
+      name: 'order-service/src/client.ts',
+      text: 'import paymentClient from "../payment-service/client"; export function submit() { return paymentClient.reserve(); }'
+    },
+    {
+      name: 'billing-service/db/reconcile.proc',
+      text: 'CREATE PROCEDURE dbo.Reconcile AS BEGIN EXEC dbo.LoadInvoices; SELECT * FROM dbo.InvoiceLedger; END'
+    },
+    {
+      name: 'catalog-service/src/CatalogClient.cs',
+      text: 'public class CatalogClient { public void Sync() { PaymentServiceClient.Reserve(); } }'
+    }
+  ]);
+
+  assert.ok(analysis.dependencies.some((item) => item.type === 'module' && item.to === 'payment-service'));
+  assert.ok(analysis.dependencies.some((item) => item.type === 'procedure' && item.to === 'dbo.LoadInvoices'));
+  assert.ok(analysis.dependencies.some((item) => item.type === 'datastore' && item.to === 'dbo.InvoiceLedger'));
+  assert.ok(analysis.datastores.includes('dbo.InvoiceLedger'));
+  assert.ok(analysis.edges.some((edge) => edge.from === 'order-service' && edge.to === 'payment-service'));
+});

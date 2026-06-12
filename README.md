@@ -10,6 +10,7 @@ This repository starts with a working web MVP:
 - Parse source, IaC, OpenAPI, YAML, JSON, and configuration artifacts locally in the browser.
 - Infer services, datastore references, and service-to-service calls.
 - Produce compact AST summaries for C#, SQL/T-SQL/proc, TypeScript, JavaScript, and JSON files.
+- Infer module, service-call, SQL table, and stored procedure dependencies from AST summaries.
 - Detect architecture anti-patterns with deterministic heuristics.
 - Merge findings from external scanners or policy tools into the same scorecard.
 - Generate risk counts, recommendations, and scorecard dimensions.

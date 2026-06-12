@@ -9,6 +9,7 @@ export {
 } from './fileFilters.js';
 export { extractCalls, inferDatastores, inferServiceName } from './graphInference.js';
 export { createExternalFinding, createRuleFinding } from './findings.js';
+export { extractAstDependencies, extractCallsFromAst, extractDatastoresFromAst } from './dependencyInference.js';
 export { normalizeExternalFindings, normalizeExternalReport } from './externalFindings.js';
 export {
   detectLanguage,

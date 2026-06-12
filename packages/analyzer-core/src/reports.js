@@ -22,6 +22,7 @@ Generated: ${analysis.analyzedAt}
 - Artifacts analyzed: ${analysis.files.length}
 - Services inferred: ${analysis.services.length}
 - ASTs parsed: ${analysis.asts?.filter((ast) => ast.parseStatus === 'parsed').length || 0}
+- Dependencies inferred: ${analysis.dependencies?.length || 0}
 - Datastores inferred: ${analysis.datastores.length}
 - Findings: ${analysis.findings.length}
 - Overall score: ${analysis.overall}/100
