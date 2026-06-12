@@ -10,6 +10,7 @@ export {
 export { extractCalls, inferDatastores, inferServiceName } from './graphInference.js';
 export { createExternalFinding, createRuleFinding } from './findings.js';
 export { createTextCallDependency, extractAstDependencies, extractCallsFromAst, extractDatastoresFromAst } from './dependencyInference.js';
+export { addCyclicDependencyFindings, addDependencyRuleFindings, addStoredProcedureCouplingFindings } from './dependencyRules.js';
 export { normalizeExternalFindings, normalizeExternalReport } from './externalFindings.js';
 export {
   detectLanguage,

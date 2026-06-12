@@ -1,5 +1,6 @@
 import { createRuleFinding } from './findings.js';
 import { createTextCallDependency, extractAstDependencies, extractCallsFromAst, extractDatastoresFromAst } from './dependencyInference.js';
+import { addDependencyRuleFindings } from './dependencyRules.js';
 import { extractCalls, inferDatastores, inferServiceName } from './graphInference.js';
 import { normalizeExternalFindings } from './externalFindings.js';
 import { parseSourceAsts } from './ast/index.js';
@@ -100,6 +101,8 @@ export function analyzeSolution(sourceFiles, options = {}) {
 
   const importedFindings = normalizeExternalFindings(options.externalFindings || [], 'external');
   findings.push(...importedFindings);
+  const uniqueDependencies = [...new Map(dependencies.map((item) => [`${item.from}:${item.to}:${item.type}:${item.file}:${item.line || ''}`, item])).values()];
+  addDependencyRuleFindings(findings, uniqueDependencies);
 
   const scores = calculateScores({ findings, edges, serviceCount: services.size });
   const recommendations = createRecommendations(findings);
@@ -108,7 +111,7 @@ export function analyzeSolution(sourceFiles, options = {}) {
     files: sourceFiles,
     services: [...services.values()],
     asts,
-    dependencies: [...new Map(dependencies.map((item) => [`${item.from}:${item.to}:${item.type}:${item.file}:${item.line || ''}`, item])).values()],
+    dependencies: uniqueDependencies,
     datastores: [...new Set([...datastoresByService.values()].flatMap((set) => [...set]))],
     edges,
     findings,

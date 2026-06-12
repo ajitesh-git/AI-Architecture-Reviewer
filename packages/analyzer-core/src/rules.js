@@ -28,6 +28,20 @@ export const RULES = [
     recommendation: 'Move ownership to one service and expose access through APIs/events instead of sharing the database.'
   },
   {
+    id: 'cyclic-service-dependency',
+    name: 'Cyclic Service Dependency',
+    severity: 'High',
+    category: 'coupling',
+    recommendation: 'Break the cycle by introducing an event, queue, stable API boundary, or ownership change between the services.'
+  },
+  {
+    id: 'stored-procedure-data-coupling',
+    name: 'Stored Procedure Data Coupling',
+    severity: 'High',
+    category: 'coupling',
+    recommendation: 'Reduce cross-table stored procedure orchestration and move business workflow ownership into an explicit service boundary.'
+  },
+  {
     id: 'overly-broad-api-surface',
     name: 'Overly Broad API Surface',
     severity: 'Medium',

@@ -21,6 +21,8 @@ Rules identify architecture risks from uploaded artifacts.
 - `missing-timeouts-and-retries`
 - `synchronous-service-chaining`
 - `shared-database-coupling`
+- `cyclic-service-dependency`
+- `stored-procedure-data-coupling`
 - `overly-broad-api-surface`
 - `low-modularity`
 
@@ -28,9 +30,9 @@ The executable MVP rule metadata is exported from `packages/analyzer-core`. The 
 
 ## Future Rule Types
 
-- Language-aware AST rules
+- Additional language-aware AST rules
 - IaC rules using Checkov/tfsec style checks
 - Kubernetes rules
 - OpenAPI contract rules
-- Dependency graph rules
+- Additional dependency graph rules
 - Organization-specific custom rules

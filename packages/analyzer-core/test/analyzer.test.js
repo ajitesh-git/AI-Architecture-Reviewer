@@ -121,3 +121,33 @@ test('uses AST nodes to infer architecture dependencies', () => {
   assert.ok(analysis.datastores.includes('dbo.InvoiceLedger'));
   assert.ok(analysis.edges.some((edge) => edge.from === 'order-service' && edge.to === 'payment-service'));
 });
+
+test('detects cyclic service dependencies from dependency graph', () => {
+  const analysis = analyzeSolution([
+    {
+      name: 'order-service/src/client.ts',
+      text: 'import paymentClient from "../payment-service/client"; export function submit() { return paymentClient.reserve(); }'
+    },
+    {
+      name: 'payment-service/src/client.ts',
+      text: 'import orderClient from "../order-service/client"; export function settle() { return orderClient.close(); }'
+    }
+  ]);
+
+  const finding = analysis.findings.find((item) => item.ruleId === 'cyclic-service-dependency');
+  assert.ok(finding);
+  assert.match(finding.where, /order-service|payment-service/);
+});
+
+test('detects stored procedure data coupling from dependency graph', () => {
+  const analysis = analyzeSolution([
+    {
+      name: 'billing-service/db/reconcile.proc',
+      text: 'CREATE PROCEDURE dbo.Reconcile AS BEGIN EXEC dbo.LoadInvoices; SELECT * FROM dbo.InvoiceLedger JOIN dbo.PaymentLedger ON 1 = 1; END'
+    }
+  ]);
+
+  const finding = analysis.findings.find((item) => item.ruleId === 'stored-procedure-data-coupling');
+  assert.ok(finding);
+  assert.match(finding.evidence, /InvoiceLedger/);
+});
