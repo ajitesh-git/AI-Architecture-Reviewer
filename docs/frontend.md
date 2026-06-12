@@ -36,3 +36,5 @@ The web app lets users upload scanner JSON separately from solution artifacts. R
 ## Server Analysis Jobs
 
 Server execution creates a background analysis job and polls `GET /api/analysis-jobs/:id` until completion. This keeps large zip uploads responsive and avoids blocking the UI on one long request.
+
+Findings and dependencies are loaded as paginated collections after the summary result arrives, so large repository analysis does not push every row into the browser at once.

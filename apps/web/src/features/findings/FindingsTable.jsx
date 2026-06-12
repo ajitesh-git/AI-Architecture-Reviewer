@@ -1,12 +1,13 @@
 import { AlertTriangle, ChevronDown, ChevronRight, Download, Filter } from 'lucide-react';
 import { downloadReport } from '../../services/reportDownload';
 
-export function FindingsTable({ findings, analysis, selectedFindingId, onSelectFinding }) {
-  const visible = findings.slice(0, 8);
+export function FindingsTable({ findings, total, analysis, selectedFindingId, onSelectFinding, onLoadMore }) {
+  const visible = findings;
+  const hasMore = findings.length < total;
   return (
     <section className="panel table-panel">
       <div className="panel-title">
-        <h2>Anti-patterns <span>{findings.length}</span></h2>
+        <h2>Anti-patterns <span>{total}</span></h2>
         <div>
           <button className="tool"><Filter size={15} /> All Severities <ChevronDown size={14} /></button>
           <button className="tool" disabled={!analysis} onClick={() => downloadReport(analysis, 'json')}><Download size={14} /> JSON</button>
@@ -37,7 +38,10 @@ export function FindingsTable({ findings, analysis, selectedFindingId, onSelectF
           {visible.length === 0 && <tr><td colSpan="7" className="empty-cell">No anti-patterns detected yet.</td></tr>}
         </tbody>
       </table>
-      <div className="panel-foot"><span>{findings.length ? `1-${visible.length} of ${findings.length}` : '0 findings'}</span><button>View all findings <ChevronRight size={15} /></button></div>
+      <div className="panel-foot">
+        <span>{total ? `1-${visible.length} of ${total}` : '0 findings'}</span>
+        <button disabled={!hasMore} onClick={onLoadMore}>View more findings <ChevronRight size={15} /></button>
+      </div>
     </section>
   );
 }

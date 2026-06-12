@@ -66,6 +66,8 @@ Job statuses:
 - `completed`
 - `failed`
 
+The job result endpoint returns a lightweight summary with the first page of findings, dependencies, and files. Use the paginated analysis endpoints for larger result sets.
+
 With external analyzer findings:
 
 ```http
@@ -107,6 +109,10 @@ GET /api/analyses
 
 ```http
 GET /api/analyses/:id
+GET /api/analyses/:id/summary
+GET /api/analyses/:id/findings?page=1&pageSize=50
+GET /api/analyses/:id/dependencies?page=1&pageSize=50
+GET /api/analyses/:id/files?page=1&pageSize=50
 ```
 
 ### Export Report

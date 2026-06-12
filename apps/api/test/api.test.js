@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
 
@@ -130,7 +133,8 @@ test('creates analysis from multipart uploads with external findings', async () 
 });
 
 test('creates and completes background analysis job from multipart upload', async () => {
-  const app = createApp({ storage: createMemoryStorage() });
+  const storageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'aar-api-job-'));
+  const app = createApp({ storageDir });
   const createResponse = await request(app)
     .post('/api/analysis-jobs')
     .attach('files', Buffer.from('fetch("http://payment-service/api/payments");'), {
@@ -150,6 +154,42 @@ test('creates and completes background analysis job from multipart upload', asyn
   assert.ok(resultResponse.body.analysis.findings.length > 0);
   assert.ok(resultResponse.body.analysis.dependencies.some((dependency) => dependency.to === 'payment-service'));
   assert.equal(resultResponse.body.analysis.files[0].text, undefined);
+});
+
+test('paginates analysis findings dependencies and files', async () => {
+  const app = createApp({ storage: createMemoryStorage() });
+  const createResponse = await request(app)
+    .post('/api/analyses')
+    .send({
+      files: [
+        {
+          name: 'order-service/src/client.js',
+          text: 'fetch("http://payment-service/api"); fetch("http://inventory-service/api"); const password = "sample-secret";'
+        },
+        {
+          name: 'payment-service/src/client.js',
+          text: 'fetch("http://order-service/api");'
+        }
+      ]
+    });
+
+  assert.equal(createResponse.status, 201);
+  assert.ok(createResponse.body.analysis.totals.findings >= createResponse.body.analysis.findings.length);
+
+  const findingsResponse = await request(app).get(`/api/analyses/${createResponse.body.id}/findings?page=1&pageSize=1`);
+  assert.equal(findingsResponse.status, 200);
+  assert.equal(findingsResponse.body.items.length, 1);
+  assert.ok(findingsResponse.body.total >= 1);
+
+  const dependenciesResponse = await request(app).get(`/api/analyses/${createResponse.body.id}/dependencies?page=1&pageSize=1`);
+  assert.equal(dependenciesResponse.status, 200);
+  assert.equal(dependenciesResponse.body.items.length, 1);
+  assert.ok(dependenciesResponse.body.total >= 1);
+
+  const filesResponse = await request(app).get(`/api/analyses/${createResponse.body.id}/files?page=1&pageSize=1`);
+  assert.equal(filesResponse.status, 200);
+  assert.equal(filesResponse.body.items.length, 1);
+  assert.equal(filesResponse.body.items[0].text, undefined);
 });
 
 test('rejects empty analysis request', async () => {

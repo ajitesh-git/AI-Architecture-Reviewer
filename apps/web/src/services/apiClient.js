@@ -88,3 +88,15 @@ export async function fetchAnalysisRecord(id) {
   if (!response.ok) throw new Error(`Analysis API returned ${response.status}`);
   return response.json();
 }
+
+export async function fetchAnalysisFindings(id, page = 1, pageSize = 50) {
+  const response = await fetch(`${API_BASE_URL}/api/analyses/${id}/findings?page=${page}&pageSize=${pageSize}`);
+  if (!response.ok) throw new Error(`Findings API returned ${response.status}`);
+  return response.json();
+}
+
+export async function fetchAnalysisDependencies(id, page = 1, pageSize = 50) {
+  const response = await fetch(`${API_BASE_URL}/api/analyses/${id}/dependencies?page=${page}&pageSize=${pageSize}`);
+  if (!response.ok) throw new Error(`Dependencies API returned ${response.status}`);
+  return response.json();
+}

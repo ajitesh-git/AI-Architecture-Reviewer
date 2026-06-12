@@ -69,6 +69,50 @@ function createResponseRecord(record) {
   };
 }
 
+function createAnalysisSummaryRecord(record) {
+  const analysis = record.analysis;
+  return {
+    id: record.id,
+    createdAt: record.createdAt,
+    analysis: {
+      analyzedAt: analysis.analyzedAt,
+      asts: [],
+      astSummary: {
+        parsed: analysis.asts.filter((ast) => ast.parseStatus === 'parsed').length,
+        total: analysis.asts.length
+      },
+      datastores: analysis.datastores,
+      edges: analysis.edges.slice(0, 100),
+      files: analysis.files.map((file) => ({ name: file.name, size: file.size })).slice(0, 25),
+      findings: analysis.findings.slice(0, 25),
+      dependencies: analysis.dependencies.slice(0, 25),
+      recommendations: analysis.recommendations,
+      services: analysis.services,
+      scores: analysis.scores,
+      overall: analysis.overall,
+      totals: {
+        files: analysis.files.length,
+        findings: analysis.findings.length,
+        dependencies: analysis.dependencies.length,
+        edges: analysis.edges.length
+      }
+    }
+  };
+}
+
+function paginate(items, query) {
+  const page = Math.max(1, Number(query.page || 1));
+  const pageSize = Math.min(200, Math.max(1, Number(query.pageSize || 50)));
+  const start = (page - 1) * pageSize;
+  return {
+    items: items.slice(start, start + pageSize),
+    page,
+    pageSize,
+    total: items.length,
+    totalPages: Math.max(1, Math.ceil(items.length / pageSize))
+  };
+}
+
 function createAnalysisJobStore() {
   const jobs = new Map();
   return {
@@ -222,7 +266,7 @@ export function createApp(options = {}) {
       const externalFindings = externalFindingsFromRequest(req);
       const analysis = analyzeSolution(sourceFiles, { externalFindings });
       const record = await storage.saveAnalysis(analysis);
-      res.status(201).json(createResponseRecord(record));
+      res.status(201).json(createAnalysisSummaryRecord(record));
     } catch (error) {
       next(error);
     }
@@ -262,7 +306,7 @@ export function createApp(options = {}) {
     res.json(createJobResponse(job));
   });
 
-  app.get('/api/analysis-jobs/:id/result', (req, res) => {
+  app.get('/api/analysis-jobs/:id/result', async (req, res, next) => {
     const job = jobs.get(req.params.id);
     if (!job) {
       res.status(404).json({ error: 'Analysis job not found.' });
@@ -272,7 +316,11 @@ export function createApp(options = {}) {
       res.status(409).json(createJobResponse(job));
       return;
     }
-    res.json(job.result);
+    try {
+      res.json(createAnalysisSummaryRecord(await storage.getAnalysis(job.analysisId)));
+    } catch (error) {
+      next(error);
+    }
   });
 
   app.get('/api/analyses', async (_req, res, next) => {
@@ -285,7 +333,46 @@ export function createApp(options = {}) {
 
   app.get('/api/analyses/:id', async (req, res, next) => {
     try {
-      res.json(createResponseRecord(await storage.getAnalysis(req.params.id)));
+      res.json(createAnalysisSummaryRecord(await storage.getAnalysis(req.params.id)));
+    } catch (error) {
+      if (error.code === 'ENOENT') res.status(404).json({ error: 'Analysis not found.' });
+      else next(error);
+    }
+  });
+
+  app.get('/api/analyses/:id/summary', async (req, res, next) => {
+    try {
+      res.json(createAnalysisSummaryRecord(await storage.getAnalysis(req.params.id)));
+    } catch (error) {
+      if (error.code === 'ENOENT') res.status(404).json({ error: 'Analysis not found.' });
+      else next(error);
+    }
+  });
+
+  app.get('/api/analyses/:id/findings', async (req, res, next) => {
+    try {
+      const record = await storage.getAnalysis(req.params.id);
+      res.json(paginate(record.analysis.findings, req.query));
+    } catch (error) {
+      if (error.code === 'ENOENT') res.status(404).json({ error: 'Analysis not found.' });
+      else next(error);
+    }
+  });
+
+  app.get('/api/analyses/:id/dependencies', async (req, res, next) => {
+    try {
+      const record = await storage.getAnalysis(req.params.id);
+      res.json(paginate(record.analysis.dependencies, req.query));
+    } catch (error) {
+      if (error.code === 'ENOENT') res.status(404).json({ error: 'Analysis not found.' });
+      else next(error);
+    }
+  });
+
+  app.get('/api/analyses/:id/files', async (req, res, next) => {
+    try {
+      const record = await storage.getAnalysis(req.params.id);
+      res.json(paginate(record.analysis.files.map((file) => ({ name: file.name, size: file.size })), req.query));
     } catch (error) {
       if (error.code === 'ENOENT') res.status(404).json({ error: 'Analysis not found.' });
       else next(error);

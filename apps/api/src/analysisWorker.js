@@ -19,19 +19,6 @@ function canIncludeTextArtifact(size) {
   return size <= MAX_TEXT_FILE_BYTES;
 }
 
-function createResponseRecord(record) {
-  return {
-    ...record,
-    analysis: {
-      ...record.analysis,
-      files: record.analysis.files.map((file) => ({
-        name: file.name,
-        size: file.size
-      }))
-    }
-  };
-}
-
 async function expandUploadedFile(file) {
   const name = file.originalname || file.fieldname;
   if (/\.zip$/i.test(name)) {
@@ -91,8 +78,7 @@ async function run() {
       status: 'completed',
       progress: 100,
       stage: 'Completed',
-      analysisId: record.id,
-      result: createResponseRecord(record)
+      analysisId: record.id
     });
   } catch (error) {
     post({ status: 'failed', progress: 100, stage: 'Failed', error: error.message });

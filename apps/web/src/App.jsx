@@ -19,6 +19,8 @@ import {
   createAnalysisJobFromSources,
   createAnalysisJobFromUploads,
   fetchAnalysisHistory,
+  fetchAnalysisDependencies,
+  fetchAnalysisFindings,
   fetchAnalysisJob,
   fetchAnalysisJobResult,
   fetchAnalysisRecord
@@ -33,6 +35,9 @@ export function App() {
   const [externalReports, setExternalReports] = useState([]);
   const [externalFindings, setExternalFindings] = useState([]);
   const [analysis, setAnalysis] = useState(null);
+  const [analysisId, setAnalysisId] = useState(null);
+  const [findingPage, setFindingPage] = useState(1);
+  const [dependencyPage, setDependencyPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -47,6 +52,16 @@ export function App() {
   const recommendations = analysis?.recommendations || [];
   const dependencies = analysis?.dependencies || [];
   const selectedFinding = findings.find((finding) => finding.id === selectedFindingId) || findings[0] || null;
+  const findingTotal = analysis?.totals?.findings ?? findings.length;
+  const dependencyTotal = analysis?.totals?.dependencies ?? dependencies.length;
+
+  function applyAnalysisRecord(record) {
+    setAnalysis(record.analysis);
+    setAnalysisId(record.id);
+    setFindingPage(1);
+    setDependencyPage(1);
+    setSelectedFindingId(record.analysis.findings[0]?.id || null);
+  }
 
   async function handleFiles(fileList) {
     if (!fileList?.length) return;
@@ -57,6 +72,7 @@ export function App() {
     setUploadFiles((current) => [...current, ...selectedFiles]);
     setSourceFiles((current) => [...current, ...expanded]);
     setAnalysis(null);
+    setAnalysisId(null);
     setProgress(0);
     setError('');
     setSelectedFindingId(null);
@@ -72,6 +88,7 @@ export function App() {
       setExternalReports((current) => [...current, ...imported.reports]);
       setExternalFindings((current) => [...current, ...imported.findings]);
       setAnalysis(null);
+      setAnalysisId(null);
       setSelectedFindingId(null);
       setProgress(0);
     } catch (err) {
@@ -98,9 +115,8 @@ export function App() {
     setError('');
     try {
       const record = await fetchAnalysisRecord(id);
-      setAnalysis(record.analysis);
+      applyAnalysisRecord(record);
       setSourceFiles(record.analysis.files);
-      setSelectedFindingId(record.analysis.findings[0]?.id || null);
       setProgress(100);
       setApiStatus(`Loaded server analysis ${record.id}`);
     } catch (err) {
@@ -111,6 +127,9 @@ export function App() {
   function completeLocalAnalysis(files, importedFindings = externalFindings) {
     const nextAnalysis = analyzeSolution(files, { externalFindings: importedFindings });
     setAnalysis(nextAnalysis);
+    setAnalysisId(null);
+    setFindingPage(1);
+    setDependencyPage(1);
     setSelectedFindingId(nextAnalysis.findings[0]?.id || null);
     setApiStatus('Completed locally in browser');
     return nextAnalysis;
@@ -149,8 +168,7 @@ export function App() {
         setApiStatus(`Queued analysis job ${job.id}`);
         const record = await waitForAnalysisJob(job.id);
         setProgress(85);
-        setAnalysis(record.analysis);
-        setSelectedFindingId(record.analysis.findings[0]?.id || null);
+        applyAnalysisRecord(record);
         setApiStatus(`Saved server analysis ${record.id}`);
         await refreshHistory();
       } else {
@@ -181,6 +199,7 @@ export function App() {
     setExternalReports([]);
     setExternalFindings([]);
     setAnalysis(null);
+    setAnalysisId(null);
     setSelectedFindingId(null);
     setProgress(0);
     setTimeout(() => runAnalysis(SAMPLE_FILES, [], []), 50);
@@ -192,6 +211,7 @@ export function App() {
     setExternalReports([]);
     setExternalFindings([]);
     setAnalysis(null);
+    setAnalysisId(null);
     setSelectedFindingId(null);
     setProgress(0);
     setAnalyzing(false);
@@ -204,6 +224,28 @@ export function App() {
     }
     refreshHistory();
   }, []);
+
+  async function loadMoreFindings() {
+    if (!analysisId || findings.length >= findingTotal) return;
+    const nextPage = findingPage + 1;
+    const page = await fetchAnalysisFindings(analysisId, nextPage, 50);
+    setAnalysis((current) => ({
+      ...current,
+      findings: [...(current?.findings || []), ...page.items]
+    }));
+    setFindingPage(nextPage);
+  }
+
+  async function loadMoreDependencies() {
+    if (!analysisId || dependencies.length >= dependencyTotal) return;
+    const nextPage = dependencyPage + 1;
+    const page = await fetchAnalysisDependencies(analysisId, nextPage, 50);
+    setAnalysis((current) => ({
+      ...current,
+      dependencies: [...(current?.dependencies || []), ...page.items]
+    }));
+    setDependencyPage(nextPage);
+  }
 
   return (
     <main className="app">
@@ -220,6 +262,7 @@ export function App() {
                   setExternalReports([]);
                   setExternalFindings([]);
                   setAnalysis(null);
+                  setAnalysisId(null);
                   setSelectedFindingId(null);
                   setProgress(0);
                 }} />
@@ -228,9 +271,9 @@ export function App() {
               <AnalyzePanel analysis={analysis} sourceFiles={sourceFiles} analyzing={analyzing} progress={progress} onAnalyze={() => runAnalysis()} runMode={runMode} setRunMode={setRunMode} apiStatus={apiStatus} error={error} />
             </div>
             <div className="bottom-grid">
-              <FindingsTable findings={findings} analysis={analysis} selectedFindingId={selectedFinding?.id} onSelectFinding={(finding) => setSelectedFindingId(finding.id)} />
+              <FindingsTable findings={findings} total={findingTotal} analysis={analysis} selectedFindingId={selectedFinding?.id} onSelectFinding={(finding) => setSelectedFindingId(finding.id)} onLoadMore={loadMoreFindings} />
               <Improvements recommendations={recommendations} />
-              <DependenciesPanel dependencies={dependencies} />
+              <DependenciesPanel dependencies={dependencies} total={dependencyTotal} onLoadMore={loadMoreDependencies} />
             </div>
           </div>
           <aside className="right-column">
