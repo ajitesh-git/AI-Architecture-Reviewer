@@ -34,11 +34,27 @@ To build the production app:
 npm run build
 ```
 
+## CLI Usage
+
+Analyze a local folder or `.zip` file from the terminal:
+
+```bash
+npm run analyze -- examples/sample-microservices --format markdown --out report.md
+```
+
+Supported formats:
+
+- `json`
+- `markdown`
+
+If `--out` is omitted, the report is printed to stdout.
+
 ## Repository Layout
 
 ```text
 apps/
   web/                  React + Vite web application
+  cli/                  Node CLI for local folder and zip analysis
 packages/
   analyzer-core/        Reusable analyzer, scoring, rules, reports, tests
 docs/

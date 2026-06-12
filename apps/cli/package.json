@@ -1,0 +1,18 @@
+{
+  "name": "@ai-architecture-reviewer/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Command-line interface for AI Architecture Reviewer.",
+  "bin": {
+    "ai-architecture-reviewer": "./src/index.js"
+  },
+  "scripts": {
+    "analyze": "node src/index.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@ai-architecture-reviewer/analyzer-core": "file:../../packages/analyzer-core",
+    "jszip": "latest"
+  }
+}

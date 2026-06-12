@@ -19,6 +19,8 @@
 
 Status: in progress. `packages/analyzer-core` now owns the MVP analyzer, rule metadata, scoring helpers, sample data, JSON export, Markdown export, and baseline tests.
 
+Additional progress: `apps/cli` now runs the shared analyzer against local folders or zip files and can output JSON or Markdown reports.
+
 ## v0.3 Backend Worker
 
 - Add API service

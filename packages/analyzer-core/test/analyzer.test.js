@@ -5,7 +5,9 @@ import {
   analyzeSolution,
   createMarkdownReport,
   extractCalls,
-  inferServiceName
+  inferServiceName,
+  isIgnoredPath,
+  isSupportedTextArtifact
 } from '../src/index.js';
 
 test('infers service name from common path segments', () => {
@@ -32,4 +34,11 @@ test('creates markdown report', () => {
   assert.match(report, /# Architecture Review Report/);
   assert.match(report, /## Scorecard/);
   assert.match(report, /Hardcoded Secret|Centralize Secrets Management/);
+});
+
+test('identifies ignored and unsupported artifacts', () => {
+  assert.equal(isIgnoredPath('node_modules/pkg/index.js'), true);
+  assert.equal(isIgnoredPath('src/index.js'), false);
+  assert.equal(isSupportedTextArtifact('diagram.png'), false);
+  assert.equal(isSupportedTextArtifact('infra/main.tf'), true);
 });
