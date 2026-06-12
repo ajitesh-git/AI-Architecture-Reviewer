@@ -24,6 +24,8 @@ Rules identify architecture risks from uploaded artifacts.
 - `overly-broad-api-surface`
 - `low-modularity`
 
+The executable MVP rule metadata is exported from `packages/analyzer-core`. The root `rules/` directory is reserved for shareable rule packs as the product grows.
+
 ## Future Rule Types
 
 - Language-aware AST rules

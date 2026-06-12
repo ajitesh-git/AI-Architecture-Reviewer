@@ -4,12 +4,14 @@
   "private": true,
   "description": "Open-source architecture review tool that analyzes uploaded solutions, detects anti-patterns, suggests improvements, and generates scorecards.",
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
   "scripts": {
     "dev": "npm run dev -w apps/web",
     "build": "npm run build -w apps/web",
-    "preview": "npm run preview -w apps/web"
+    "preview": "npm run preview -w apps/web",
+    "test": "npm test --workspaces --if-present"
   },
   "engines": {
     "node": ">=20"

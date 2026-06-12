@@ -17,6 +17,8 @@
 - Add Markdown report export
 - Improve graph extraction
 
+Status: in progress. `packages/analyzer-core` now owns the MVP analyzer, rule metadata, scoring helpers, sample data, JSON export, Markdown export, and baseline tests.
+
 ## v0.3 Backend Worker
 
 - Add API service

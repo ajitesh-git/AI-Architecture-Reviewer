@@ -32,7 +32,7 @@ Redis backs queue/cache behavior.
 
 ## Package Direction
 
-Future versions should extract analyzer logic from `apps/web/src/main.jsx` into:
+Analyzer logic now lives in `packages/analyzer-core` so the same engine can be reused by the browser app, a future backend worker, or a CLI.
 
 ```text
 packages/analyzer-core/
@@ -40,4 +40,4 @@ packages/shared-types/
 packages/report-generator/
 ```
 
-This will allow the same analysis engine to run in-browser, in a backend worker, or in a CLI.
+Future packages should add shared API contracts and report rendering beyond the current JSON/Markdown exports.

@@ -11,7 +11,7 @@ This repository starts with a working web MVP:
 - Infer services, datastore references, and service-to-service calls.
 - Detect architecture anti-patterns with deterministic heuristics.
 - Generate risk counts, recommendations, and scorecard dimensions.
-- Export analysis as JSON.
+- Export analysis as JSON or Markdown.
 
 No backend or AI provider is required for the MVP.
 
@@ -39,6 +39,8 @@ npm run build
 ```text
 apps/
   web/                  React + Vite web application
+packages/
+  analyzer-core/        Reusable analyzer, scoring, rules, reports, tests
 docs/
   architecture.md        Product architecture and extension plan
   rules.md               Anti-pattern rule model

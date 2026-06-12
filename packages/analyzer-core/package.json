@@ -1,0 +1,13 @@
+{
+  "name": "@ai-architecture-reviewer/analyzer-core",
+  "version": "0.2.0",
+  "type": "module",
+  "description": "Core architecture analyzer, scorecard, rule metadata, and report generation for AI Architecture Reviewer.",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

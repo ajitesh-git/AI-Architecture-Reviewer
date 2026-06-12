@@ -29,30 +29,13 @@ import {
   Trash2,
   Upload
 } from 'lucide-react';
+import {
+  SAMPLE_FILES,
+  analyzeSolution,
+  createJsonReport,
+  createMarkdownReport
+} from '@ai-architecture-reviewer/analyzer-core';
 import './styles.css';
-
-const SAMPLE_FILES = [
-  {
-    name: 'order-service/src/OrderClient.cs',
-    size: 2140,
-    text: 'public class OrderClient { var token = "secret-12345"; httpClient.GetAsync("http://payment-service/api/payments"); httpClient.GetAsync("http://inventory-service/api/items"); }'
-  },
-  {
-    name: 'payment-service/app.js',
-    size: 1850,
-    text: 'const password = "p@ssw0rd"; fetch("http://inventory-service/reserve"); const db = "OrdersDb";'
-  },
-  {
-    name: 'inventory-service/openapi.yaml',
-    size: 1620,
-    text: 'openapi: 3.0.0\npaths:\n  /items:\n  /stock:\n  /reserve:\ncomponents:\n  schemas:\n    Item: {}'
-  },
-  {
-    name: 'infra/main.tf',
-    size: 920,
-    text: 'resource "aws_db_instance" "orders" { name = "OrdersDb" }\nresource "aws_db_instance" "payments" { name = "PaymentsDb" }'
-  }
-];
 
 const navItems = [
   ['Overview', Layers3],
@@ -64,193 +47,10 @@ const navItems = [
   ['Settings', Settings]
 ];
 
-const severityWeight = { Critical: 18, High: 11, Medium: 6, Low: 3 };
-
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function inferServiceName(path) {
-  const normalized = path.replace(/\\/g, '/').toLowerCase();
-  const parts = normalized.split('/');
-  const hit = parts.find((part) => /service|api|worker|frontend|backend|gateway/.test(part));
-  if (hit) return hit.replace(/\.(csproj|sln|json|yaml|yml|tf|js|ts|java|py)$/g, '');
-  const file = parts.at(-1)?.replace(/\.[^.]+$/, '') || 'solution';
-  return file.includes('-') || file.includes('_') ? file : parts[0] || file;
-}
-
-function inferDatastores(text) {
-  const stores = new Set();
-  const patterns = [
-    /(?:database|db|dbname|initial catalog|catalog)\s*[:=]\s*["']?([a-z0-9_-]{3,})/gi,
-    /(?:mongodb|postgres|postgresql|mysql|sqlserver|redis|dynamodb|cosmosdb|oracle|mssql)/gi,
-    /resource\s+"(?:aws_db_instance|azurerm_(?:mssql|postgresql|mysql)|google_sql_database_instance)"/gi
-  ];
-  patterns.forEach((pattern) => {
-    for (const match of text.matchAll(pattern)) stores.add((match[1] || match[0]).replace(/["']/g, '').slice(0, 40));
-  });
-  return [...stores];
-}
-
-function extractCalls(text) {
-  const calls = [];
-  const httpPattern = /(https?:\/\/[a-z0-9_.:-]+\/?[^\s"'`)<>]*)/gi;
-  for (const match of text.matchAll(httpPattern)) calls.push(match[1]);
-  const serviceRef = /\b([a-z0-9-]+-service)\b/gi;
-  for (const match of text.matchAll(serviceRef)) calls.push(match[1]);
-  return [...new Set(calls)];
-}
-
-function addFinding(findings, severity, name, where, impact, confidence, evidence, recommendation) {
-  findings.push({ id: `${name}-${where}-${findings.length}`, severity, name, where, impact, confidence, evidence, recommendation });
-}
-
-function analyzeSolution(sourceFiles) {
-  const readable = sourceFiles.filter((file) => file.text.trim());
-  const services = new Map();
-  const datastoresByService = new Map();
-  const edges = [];
-  const findings = [];
-
-  readable.forEach((file) => {
-    const service = inferServiceName(file.name);
-    if (!services.has(service)) services.set(service, { name: service, files: 0, lines: 0, calls: 0 });
-    const stats = services.get(service);
-    stats.files += 1;
-    stats.lines += file.text.split(/\r?\n/).length;
-
-    const stores = inferDatastores(file.text);
-    if (!datastoresByService.has(service)) datastoresByService.set(service, new Set());
-    stores.forEach((store) => datastoresByService.get(service).add(store));
-
-    const calls = extractCalls(file.text);
-    stats.calls += calls.length;
-    calls.forEach((target) => edges.push({ from: service, to: target.replace(/^https?:\/\//, '').split(/[/:]/)[0] }));
-
-    if (/(password|secret|apikey|api_key|accesskey|connectionstring)\s*[:=]\s*["'][^"']{6,}/i.test(file.text)) {
-      addFinding(
-        findings,
-        'Critical',
-        'Hardcoded Secret',
-        file.name,
-        'High',
-        'High',
-        'Credential-like value found in source/config text.',
-        'Move secrets to a vault or cloud secrets manager and rotate exposed values.'
-      );
-    }
-
-    if (/(fetch\(|axios\.|httpclient\.|resttemplate|webclient|requests\.|http\.get|http\.post)/i.test(file.text) && !/(timeout|cancellationtoken|retry|polly|resilience|backoff)/i.test(file.text)) {
-      addFinding(
-        findings,
-        'High',
-        'Missing Timeouts and Retries',
-        file.name,
-        'High',
-        'Medium',
-        'Outbound calls are present without nearby timeout/retry policy hints.',
-        'Add explicit timeouts, retries with backoff, and circuit breakers on outbound integrations.'
-      );
-    }
-
-    if (/openapi|swagger/i.test(file.name) && (file.text.match(/^\s*\/[a-z0-9_{}/-]+:/gim) || []).length > 25) {
-      addFinding(
-        findings,
-        'Medium',
-        'Overly Broad API Surface',
-        file.name,
-        'Medium',
-        'Medium',
-        'OpenAPI artifact exposes a large number of paths.',
-        'Group APIs by bounded context and split broad endpoints behind smaller contracts.'
-      );
-    }
-
-    if (stats.lines > 1200 && !/test|spec|mock/i.test(file.name)) {
-      addFinding(
-        findings,
-        'Medium',
-        'Low Modularity',
-        file.name,
-        'Medium',
-        'Low',
-        'A large source artifact suggests too many responsibilities in one module.',
-        'Split large modules by command/query, domain service, or infrastructure boundary.'
-      );
-    }
-  });
-
-  const serviceNames = [...services.keys()];
-  edges.forEach((edge) => {
-    const targetService = serviceNames.find((name) => edge.to.includes(name) || name.includes(edge.to));
-    if (targetService && targetService !== edge.from) {
-      addFinding(
-        findings,
-        'High',
-        'Synchronous Service Chaining',
-        `${edge.from} -> ${targetService}`,
-        'High',
-        'High',
-        `Direct service reference detected: ${edge.to}`,
-        'Prefer asynchronous events or queues for cross-service workflows that do not require immediate consistency.'
-      );
-    }
-  });
-
-  const storeConsumers = new Map();
-  datastoresByService.forEach((stores, service) => stores.forEach((store) => {
-    const key = store.toLowerCase();
-    if (!storeConsumers.has(key)) storeConsumers.set(key, new Set());
-    storeConsumers.get(key).add(service);
-  }));
-  storeConsumers.forEach((consumers, store) => {
-    if (consumers.size > 1) {
-      addFinding(
-        findings,
-        'Critical',
-        'Shared Database Coupling',
-        [...consumers].join(', '),
-        'High',
-        'Medium',
-        `Multiple services appear to reference ${store}.`,
-        'Move ownership to one service and expose access through APIs/events instead of sharing the database.'
-      );
-    }
-  });
-
-  if (serviceNames.length === 0 && readable.length > 0) {
-    services.set('solution', { name: 'solution', files: readable.length, lines: readable.reduce((sum, f) => sum + f.text.split(/\r?\n/).length, 0), calls: edges.length });
-  }
-
-  const totalPenalty = findings.reduce((sum, finding) => sum + severityWeight[finding.severity], 0);
-  const scores = {
-    Coupling: Math.max(10, 92 - findings.filter((f) => /Coupling|Chaining/.test(f.name)).length * 16 - Math.max(0, edges.length - serviceNames.length) * 2),
-    Resilience: Math.max(10, 88 - findings.filter((f) => /Timeout|Chaining/.test(f.name)).length * 14),
-    Maintainability: Math.max(10, 90 - findings.filter((f) => /Modularity|Broad/.test(f.name)).length * 14 - Math.max(0, serviceNames.length - 8) * 2),
-    Security: Math.max(10, 94 - findings.filter((f) => /Secret|Database/.test(f.name)).length * 22),
-    Scalability: Math.max(10, 86 - findings.filter((f) => /Chaining|Database|Broad/.test(f.name)).length * 10)
-  };
-  const overall = Math.max(10, Math.round(Object.values(scores).reduce((sum, value) => sum + value, 0) / 5 - Math.max(0, totalPenalty - 30) / 10));
-
-  const recommendations = [...new Map(findings.map((finding) => [finding.recommendation, {
-    title: finding.name.replace('Missing Timeouts and Retries', 'Add Timeouts and Retries').replace('Hardcoded Secret', 'Centralize Secrets Management'),
-    text: finding.recommendation,
-    severity: finding.severity
-  }])).values()];
-
-  return {
-    files: sourceFiles,
-    services: [...services.values()],
-    datastores: [...new Set([...datastoresByService.values()].flatMap((set) => [...set]))],
-    edges,
-    findings,
-    recommendations,
-    scores,
-    overall,
-    analyzedAt: new Date().toISOString()
-  };
 }
 
 async function readFileAsText(file) {
@@ -279,12 +79,16 @@ async function expandUploads(fileList) {
   return files;
 }
 
-function downloadReport(analysis) {
-  const blob = new Blob([JSON.stringify(analysis, null, 2)], { type: 'application/json' });
+function downloadReport(analysis, format) {
+  const isMarkdown = format === 'markdown';
+  const blob = new Blob(
+    [isMarkdown ? createMarkdownReport(analysis) : createJsonReport(analysis)],
+    { type: isMarkdown ? 'text/markdown' : 'application/json' }
+  );
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `architecture-review-${Date.now()}.json`;
+  link.download = `architecture-review-${Date.now()}.${isMarkdown ? 'md' : 'json'}`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -473,7 +277,8 @@ function FindingsTable({ findings, analysis }) {
         <h2>Anti-patterns <span>{findings.length}</span></h2>
         <div>
           <button className="tool"><Filter size={15} /> All Severities <ChevronDown size={14} /></button>
-          <button className="tool" disabled={!analysis} onClick={() => downloadReport(analysis)}><Download size={14} /> Export</button>
+          <button className="tool" disabled={!analysis} onClick={() => downloadReport(analysis, 'json')}><Download size={14} /> JSON</button>
+          <button className="tool" disabled={!analysis} onClick={() => downloadReport(analysis, 'markdown')}><Download size={14} /> Markdown</button>
         </div>
       </div>
       <table>
