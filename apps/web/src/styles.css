@@ -17,7 +17,10 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
-html, body { overflow-x: hidden; }
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
 button, input { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .55; }
@@ -136,8 +139,9 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 
 .topbar {
   height: 78px;
+  flex: 0 0 78px;
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) 300px 270px auto;
+  grid-template-columns: minmax(260px, 1fr) 300px 270px;
   gap: 30px;
   align-items: center;
   padding: 0 28px;
@@ -172,44 +176,9 @@ button:disabled { cursor: not-allowed; opacity: .55; }
   font-size: 14px;
 }
 
-.top-actions {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.top-actions button {
-  background: transparent;
-  border: 0;
-  color: #0d172b;
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  position: relative;
-}
-
-.top-actions .dot::after {
-  content: "";
-  position: absolute;
-  width: 7px;
-  height: 7px;
-  background: var(--blue);
-  border-radius: 50%;
-  right: 4px;
-  top: 4px;
-}
-
-.avatar {
-  width: 42px !important;
-  height: 42px !important;
-  border-radius: 50%;
-  background: #d8e3f4 !important;
-  font-weight: 650;
-}
-
 .tabs {
   height: 56px;
+  flex: 0 0 56px;
   display: flex;
   gap: 28px;
   align-items: end;
@@ -234,12 +203,14 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 }
 
 .content {
+  flex: 1 1 auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 18px;
   padding: 20px;
   min-height: 0;
   overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .content.single-column {
@@ -282,9 +253,10 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 
 .page-header {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) auto;
+  grid-template-columns: minmax(280px, 1fr) 384px;
   gap: 18px;
   align-items: center;
+  min-height: 86px;
   padding: 4px 2px 0;
 }
 
@@ -295,6 +267,7 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 
 .page-header p {
   max-width: 760px;
+  min-height: 38px;
   margin: 7px 0 0;
   color: #5d6a80;
   font-size: 13px;
@@ -302,13 +275,13 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 }
 
 .page-metrics {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin: 0;
 }
 
 .page-metrics div {
-  min-width: 118px;
   min-height: 56px;
   display: grid;
   align-content: center;
@@ -1346,11 +1319,13 @@ input[type="checkbox"] {
 }
 
 @media (max-width: 1240px) {
-  .topbar { grid-template-columns: 1fr 240px 230px auto; gap: 18px; }
+  .topbar { grid-template-columns: 1fr 240px 230px; gap: 18px; }
   .content { grid-template-columns: 1fr; }
   .right-column { grid-template-columns: 1fr 1fr; }
   .page-header { grid-template-columns: 1fr; }
-  .page-metrics { flex-wrap: wrap; }
+  .page-metrics {
+    width: min(100%, 520px);
+  }
   .findings-page,
   .scorecard-page {
     grid-template-columns: 1fr;
@@ -1395,11 +1370,8 @@ input[type="checkbox"] {
   .rail nav { display: flex; width: auto; overflow-x: auto; }
   .rail nav button { width: 58px; min-height: 48px; }
   .collapse { display: none; }
-  .topbar { grid-template-columns: minmax(0, 1fr) auto; }
+  .topbar { grid-template-columns: minmax(0, 1fr); }
   .topbar h1 { font-size: 19px; }
-  .top-actions button[aria-label="Help"],
-  .top-actions button[aria-label="Account menu"] { display: none; }
-  .top-actions { gap: 7px; }
   .tabs { gap: 20px; }
   .canvas { height: 360px; min-width: 620px; }
   .arch-panel { overflow-x: auto; }

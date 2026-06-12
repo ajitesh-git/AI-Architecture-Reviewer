@@ -247,6 +247,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
     document.querySelector('.content')?.scrollTo({ top: 0, left: 0 });
   }, [activePage]);
 
