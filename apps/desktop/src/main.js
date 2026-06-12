@@ -1,12 +1,20 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { app, BrowserWindow, shell } from 'electron';
-import { createApp } from '../../api/src/app.js';
+import { createApp } from '@ai-architecture-reviewer/api/src/app.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let apiServer;
 let mainWindow;
+
+function getWebIndexPath() {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'web', 'index.html');
+  }
+
+  return path.resolve(__dirname, '../../web/dist/index.html');
+}
 
 async function startLocalApi() {
   const storageDir = path.join(app.getPath('userData'), 'storage');
@@ -24,6 +32,7 @@ async function startLocalApi() {
 
 async function createMainWindow() {
   const apiBaseUrl = await startLocalApi();
+  const webUrlParams = { aarApiBaseUrl: apiBaseUrl };
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 960,
@@ -45,9 +54,13 @@ async function createMainWindow() {
   });
 
   if (process.env.AAR_DESKTOP_DEV_SERVER) {
-    await mainWindow.loadURL(process.env.AAR_DESKTOP_DEV_SERVER);
+    const devUrl = new URL(process.env.AAR_DESKTOP_DEV_SERVER);
+    devUrl.searchParams.set('aarApiBaseUrl', apiBaseUrl);
+    await mainWindow.loadURL(devUrl.toString());
   } else {
-    await mainWindow.loadFile(path.resolve(__dirname, '../../web/dist/index.html'));
+    await mainWindow.loadFile(getWebIndexPath(), {
+      query: webUrlParams
+    });
   }
 }
 

@@ -1,4 +1,9 @@
-export const API_BASE_URL = globalThis.desktopConfig?.apiBaseUrl
+function getDesktopApiBaseUrl() {
+  const searchParams = new URLSearchParams(globalThis.location?.search || '');
+  return globalThis.desktopConfig?.apiBaseUrl || searchParams.get('aarApiBaseUrl');
+}
+
+export const API_BASE_URL = getDesktopApiBaseUrl()
   || import.meta.env.VITE_API_BASE_URL
   || 'http://127.0.0.1:8080';
 

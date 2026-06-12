@@ -28,10 +28,13 @@
     },
     "files": [
       "src/**/*",
-      "../web/dist/**/*",
-      "../api/src/**/*",
-      "../../packages/analyzer-core/src/**/*",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../web/dist",
+        "to": "web"
+      }
     ],
     "win": {
       "target": "nsis"
