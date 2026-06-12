@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { SAMPLE_FILES, analyzeSolution } from '@ai-architecture-reviewer/analyzer-core';
 import { LeftRail } from './components/layout/LeftRail';
+import { PageHeader } from './components/layout/PageHeader';
 import { Tabs } from './components/layout/Tabs';
 import { TopBar } from './components/layout/TopBar';
 import { Scorecard } from './components/score/Scorecard';
@@ -58,6 +59,9 @@ export function App() {
   const overviewDependencies = dependencies.slice(0, 6);
   const primaryTab = ['Overview', 'Findings', 'Scorecard'].includes(activePage) ? activePage : '';
   const showRightColumn = activePage === 'Overview';
+  const architectureCount = analysis?.services?.length || 0;
+  const astParsed = analysis?.astSummary?.parsed || 0;
+  const astTotal = analysis?.astSummary?.total || sourceFiles.length || 0;
 
   function applyAnalysisRecord(record) {
     setAnalysis(record.analysis);
@@ -304,43 +308,101 @@ export function App() {
       </>
     ),
     Findings: (
-      <div className="page-grid findings-page">
-        <FindingsTable
-          findings={findings}
-          total={findingTotal}
-          analysis={analysis}
-          selectedFindingId={selectedFinding?.id}
-          onSelectFinding={(finding) => setSelectedFindingId(finding.id)}
-          onLoadMore={loadMoreFindings}
+      <div className="page-stack">
+        <PageHeader
+          title="Findings"
+          description="Review anti-patterns, scanner issues, impact, evidence, and remediation guidance."
+          metrics={[
+            ['Loaded', findings.length],
+            ['Total', findingTotal],
+            ['Selected', selectedFinding ? selectedFinding.severity : '-']
+          ]}
         />
-        <FindingDetailPanel analysis={analysis} finding={selectedFinding} />
+        <div className="page-grid findings-page">
+          <FindingsTable
+            findings={findings}
+            total={findingTotal}
+            analysis={analysis}
+            selectedFindingId={selectedFinding?.id}
+            onSelectFinding={(finding) => setSelectedFindingId(finding.id)}
+            onLoadMore={loadMoreFindings}
+          />
+          <FindingDetailPanel analysis={analysis} finding={selectedFinding} />
+        </div>
       </div>
     ),
     Scorecard: (
-      <div className="page-grid scorecard-page">
-        <Scorecard analysis={analysis} />
-        <RiskSummary findings={findings} />
-        <Improvements recommendations={recommendations} />
+      <div className="page-stack">
+        <PageHeader
+          title="Scorecard"
+          description="Compare architecture quality across coupling, resilience, maintainability, security, and scalability."
+          metrics={[
+            ['Overall', analysis ? `${analysis.overall}/100` : '0/100'],
+            ['Findings', findingTotal],
+            ['Recommendations', recommendations.length]
+          ]}
+        />
+        <div className="page-grid scorecard-page">
+          <Scorecard analysis={analysis} />
+          <RiskSummary findings={findings} />
+          <Improvements recommendations={recommendations} />
+        </div>
       </div>
     ),
     Architecture: (
       <div className="page-stack">
+        <PageHeader
+          title="Architecture"
+          description="Inspect inferred services, containers, data stores, calls, and dependency evidence."
+          metrics={[
+            ['Services', architectureCount],
+            ['Dependencies', dependencyTotal],
+            ['AST parsed', `${astParsed}/${astTotal}`]
+          ]}
+        />
         <ArchitectureView analysis={analysis} />
         <DependenciesPanel dependencies={dependencies} total={dependencyTotal} onLoadMore={loadMoreDependencies} />
       </div>
     ),
     Reports: (
       <div className="page-stack narrow-page">
+        <PageHeader
+          title="Reports"
+          description="Attach scanner reports so external security and quality findings are scored with architecture results."
+          metrics={[
+            ['Reports', externalReports.length],
+            ['Imported findings', externalFindings.length],
+            ['Artifacts', sourceFiles.length]
+          ]}
+        />
         <ExternalReportsPanel externalReports={externalReports} externalFindings={externalFindings} onReports={handleExternalReports} onClear={clearExternalReports} />
       </div>
     ),
     History: (
       <div className="page-stack narrow-page">
+        <PageHeader
+          title="History"
+          description="Open persisted server-side analyses and compare previous architecture review runs."
+          metrics={[
+            ['Saved runs', history.length],
+            ['Status', historyLoading ? 'Refreshing' : 'Ready'],
+            ['Current', analysisId ? 'Server' : analysis ? 'Local' : '-']
+          ]}
+        />
         <HistoryPanel history={history} loading={historyLoading} onRefresh={refreshHistory} onOpen={openHistoryRecord} />
       </div>
     ),
     Settings: (
       <div className="page-stack narrow-page">
+        <PageHeader
+          title="Settings"
+          description="Review runtime configuration used by the current browser or desktop session."
+          metrics={[
+            ['Execution', runMode === 'server' ? 'Server' : 'Local'],
+            ['Artifacts', sourceFiles.length],
+            ['Progress', `${progress}%`]
+          ]}
+        />
         <section className="panel settings-panel">
           <h2>Settings</h2>
           <div className="settings-list">
