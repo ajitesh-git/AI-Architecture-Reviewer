@@ -17,10 +17,12 @@ import { createFileStorage } from './storage.js';
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024,
-    files: 200
+    fileSize: 100 * 1024 * 1024,
+    files: 500
   }
 });
+
+const MAX_TEXT_FILE_BYTES = 2 * 1024 * 1024;
 
 async function expandUploadedFile(file) {
   const name = file.originalname || file.fieldname;
@@ -30,12 +32,14 @@ async function expandUploadedFile(file) {
     for (const [entryName, entry] of Object.entries(zip.files)) {
       if (entry.dir || isIgnoredPath(entryName) || !isSupportedTextArtifact(entryName)) continue;
       const text = await entry.async('string').catch(() => '');
+      if (text.length > MAX_TEXT_FILE_BYTES) continue;
       files.push(createSourceFile({ name: entryName, size: text.length, text }));
     }
     return files;
   }
 
   if (isIgnoredPath(name) || !isSupportedTextArtifact(name)) return [];
+  if (file.size > MAX_TEXT_FILE_BYTES) return [];
   return [createSourceFile({ name, size: file.size, text: file.buffer.toString('utf8') })];
 }
 
@@ -53,8 +57,14 @@ async function sourceFilesFromRequest(req) {
 }
 
 function externalFindingsFromRequest(req) {
-  const directFindings = Array.isArray(req.body?.externalFindings) ? req.body.externalFindings : [];
-  const reports = Array.isArray(req.body?.externalReports) ? req.body.externalReports : [];
+  const rawFindings = typeof req.body?.externalFindings === 'string'
+    ? JSON.parse(req.body.externalFindings)
+    : req.body?.externalFindings;
+  const rawReports = typeof req.body?.externalReports === 'string'
+    ? JSON.parse(req.body.externalReports)
+    : req.body?.externalReports;
+  const directFindings = Array.isArray(rawFindings) ? rawFindings : [];
+  const reports = Array.isArray(rawReports) ? rawReports : [];
   return [
     ...directFindings,
     ...reports.flatMap((report, index) => normalizeExternalReport(report, `external-report-${index + 1}`))

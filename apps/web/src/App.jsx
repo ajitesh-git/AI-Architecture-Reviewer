@@ -14,13 +14,14 @@ import { HistoryPanel } from './features/history/HistoryPanel';
 import { Improvements } from './features/recommendations/Improvements';
 import { ExternalReportsPanel } from './features/upload/ExternalReportsPanel';
 import { UploadPanel } from './features/upload/UploadPanel';
-import { API_BASE_URL, createServerAnalysis, fetchAnalysisHistory, fetchAnalysisRecord } from './services/apiClient';
+import { API_BASE_URL, createServerAnalysis, createServerUploadAnalysis, fetchAnalysisHistory, fetchAnalysisRecord } from './services/apiClient';
 import { readExternalReports } from './services/externalReports';
 import { expandUploads } from './services/uploadReader';
 
 export function App() {
   const [tab, setTab] = useState('Overview');
   const [sourceFiles, setSourceFiles] = useState([]);
+  const [uploadFiles, setUploadFiles] = useState([]);
   const [externalReports, setExternalReports] = useState([]);
   const [externalFindings, setExternalFindings] = useState([]);
   const [analysis, setAnalysis] = useState(null);
@@ -42,7 +43,9 @@ export function App() {
   async function handleFiles(fileList) {
     if (!fileList?.length) return;
     setLoading(true);
-    const expanded = await expandUploads([...fileList]);
+    const selectedFiles = [...fileList];
+    const expanded = await expandUploads(selectedFiles);
+    setUploadFiles((current) => [...current, ...selectedFiles]);
     setSourceFiles((current) => [...current, ...expanded]);
     setAnalysis(null);
     setProgress(0);
@@ -104,7 +107,7 @@ export function App() {
     setApiStatus('Completed locally in browser');
   }
 
-  function runAnalysis(files = sourceFiles, importedFindings = externalFindings) {
+  function runAnalysis(files = sourceFiles, importedFindings = externalFindings, serverUploadFiles = uploadFiles) {
     if (!files.length) return;
     setAnalyzing(true);
     setError('');
@@ -114,7 +117,10 @@ export function App() {
       setProgress(value);
       if (value === 100) {
         if (runMode === 'server') {
-          createServerAnalysis(files, importedFindings)
+          const serverRequest = serverUploadFiles.length
+            ? createServerUploadAnalysis(serverUploadFiles, importedFindings)
+            : createServerAnalysis(files, importedFindings);
+          serverRequest
             .then((record) => {
               setAnalysis(record.analysis);
               setSelectedFindingId(record.analysis.findings[0]?.id || null);
@@ -135,16 +141,18 @@ export function App() {
 
   function loadSample() {
     setSourceFiles(SAMPLE_FILES);
+    setUploadFiles([]);
     setExternalReports([]);
     setExternalFindings([]);
     setAnalysis(null);
     setSelectedFindingId(null);
     setProgress(0);
-    setTimeout(() => runAnalysis(SAMPLE_FILES), 50);
+    setTimeout(() => runAnalysis(SAMPLE_FILES, [], []), 50);
   }
 
   function clearAll() {
     setSourceFiles([]);
+    setUploadFiles([]);
     setExternalReports([]);
     setExternalFindings([]);
     setAnalysis(null);

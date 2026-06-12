@@ -13,6 +13,24 @@ export async function createServerAnalysis(sourceFiles, externalFindings = []) {
   return response.json();
 }
 
+export async function createServerUploadAnalysis(uploadFiles, externalFindings = []) {
+  const body = new FormData();
+  uploadFiles.forEach((file) => body.append('files', file, file.webkitRelativePath || file.name));
+  if (externalFindings.length) {
+    body.append('externalFindings', JSON.stringify(externalFindings));
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/analyses`, {
+    method: 'POST',
+    body
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.error || `Analysis API returned ${response.status}`);
+  }
+  return response.json();
+}
+
 export async function fetchAnalysisHistory() {
   const response = await fetch(`${API_BASE_URL}/api/analyses`);
   if (!response.ok) throw new Error(`History API returned ${response.status}`);

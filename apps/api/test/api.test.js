@@ -96,6 +96,29 @@ test('creates analysis with external scanner findings', async () => {
   assert.ok(response.body.analysis.findings.some((finding) => finding.ruleId === 'adr-missing'));
 });
 
+test('creates analysis from multipart uploads with external findings', async () => {
+  const app = createApp({ storage: createMemoryStorage() });
+  const response = await request(app)
+    .post('/api/analyses')
+    .field('externalFindings', JSON.stringify([
+      {
+        ruleId: 'external-boundary-risk',
+        severity: 'Medium',
+        name: 'External Boundary Risk',
+        where: 'uploaded-file',
+        recommendation: 'Review the imported boundary risk.'
+      }
+    ]))
+    .attach('files', Buffer.from('fetch("http://payment-service/api/payments");'), {
+      filename: 'order-service/src/client.js',
+      contentType: 'text/javascript'
+    });
+
+  assert.equal(response.status, 201);
+  assert.ok(response.body.analysis.findings.some((finding) => finding.ruleId === 'external-boundary-risk'));
+  assert.ok(response.body.analysis.dependencies.some((dependency) => dependency.to === 'payment-service'));
+});
+
 test('rejects empty analysis request', async () => {
   const app = createApp({ storage: createMemoryStorage() });
   const response = await request(app).post('/api/analyses').send({ files: [] });
