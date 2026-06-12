@@ -32,3 +32,7 @@ New UI work should land in the relevant feature folder. Cross-feature behavior s
 ## External Scanner Reports
 
 The web app lets users upload scanner JSON separately from solution artifacts. Reports are parsed in `services/externalReports.js`, normalized by `packages/analyzer-core`, and sent to the API as `externalFindings` in server mode. Local mode passes the same findings directly into the browser analyzer.
+
+## Server Analysis Jobs
+
+Server execution creates a background analysis job and polls `GET /api/analysis-jobs/:id` until completion. This keeps large zip uploads responsive and avoids blocking the UI on one long request.

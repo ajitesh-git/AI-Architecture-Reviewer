@@ -1,4 +1,8 @@
 import path from 'node:path';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import fsPromises from 'node:fs/promises';
+import { Worker } from 'node:worker_threads';
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
@@ -22,9 +26,20 @@ const upload = multer({
   }
 });
 
+const jobUploadDir = path.resolve('storage/uploads');
+fs.mkdirSync(jobUploadDir, { recursive: true });
+const jobUpload = multer({
+  storage: multer.diskStorage({
+    destination: jobUploadDir,
+    filename: (_req, file, cb) => cb(null, `${crypto.randomUUID()}-${file.originalname || file.fieldname}`)
+  }),
+  limits: {
+    fileSize: 250 * 1024 * 1024,
+    files: 50
+  }
+});
+
 const MAX_TEXT_FILE_BYTES = 2 * 1024 * 1024;
-const MAX_ANALYZED_FILES = 1000;
-const MAX_TOTAL_TEXT_BYTES = 10 * 1024 * 1024;
 
 function createIngestionBudget() {
   return { files: 0, textBytes: 0, skipped: 0 };
@@ -32,8 +47,6 @@ function createIngestionBudget() {
 
 function canIncludeTextArtifact(size, budget) {
   if (size > MAX_TEXT_FILE_BYTES) return false;
-  if (budget.files >= MAX_ANALYZED_FILES) return false;
-  if (budget.textBytes + size > MAX_TOTAL_TEXT_BYTES) return false;
   return true;
 }
 
@@ -56,10 +69,58 @@ function createResponseRecord(record) {
   };
 }
 
+function createAnalysisJobStore() {
+  const jobs = new Map();
+  return {
+    create() {
+      const now = new Date().toISOString();
+      const job = {
+        id: crypto.randomUUID(),
+        status: 'queued',
+        progress: 0,
+        stage: 'Queued',
+        createdAt: now,
+        updatedAt: now
+      };
+      jobs.set(job.id, job);
+      return job;
+    },
+    get(id) {
+      return jobs.get(id);
+    },
+    patch(id, patch) {
+      const current = jobs.get(id);
+      if (!current) return null;
+      const next = { ...current, ...patch, updatedAt: new Date().toISOString() };
+      jobs.set(id, next);
+      return next;
+    }
+  };
+}
+
+function createJobResponse(job) {
+  return {
+    id: job.id,
+    status: job.status,
+    progress: job.progress,
+    stage: job.stage,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt,
+    analysisId: job.analysisId,
+    error: job.error
+  };
+}
+
+async function readUploadedBuffer(file) {
+  if (file.buffer) return file.buffer;
+  if (file.path) return fsPromises.readFile(file.path);
+  return Buffer.alloc(0);
+}
+
 async function expandUploadedFile(file, budget) {
   const name = file.originalname || file.fieldname;
   if (/\.zip$/i.test(name)) {
-    const zip = await JSZip.loadAsync(file.buffer);
+    const zip = await JSZip.loadAsync(await readUploadedBuffer(file));
     const files = [];
     for (const [entryName, entry] of Object.entries(zip.files)) {
       if (entry.dir || isIgnoredPath(entryName) || !isSupportedTextArtifact(entryName)) continue;
@@ -83,7 +144,7 @@ async function expandUploadedFile(file, budget) {
     budget.skipped += 1;
     return [];
   }
-  return [includeSourceFile(createSourceFile({ name, size: file.size, text: file.buffer.toString('utf8') }), budget)];
+  return [includeSourceFile(createSourceFile({ name, size: file.size, text: (await readUploadedBuffer(file)).toString('utf8') }), budget)];
 }
 
 async function sourceFilesFromRequest(req) {
@@ -103,6 +164,25 @@ async function sourceFilesFromRequest(req) {
   return [];
 }
 
+function cloneUploadFiles(files = []) {
+  return files.map((file) => ({
+    fieldname: file.fieldname,
+    originalname: file.originalname,
+    path: file.path,
+    size: file.size
+  }));
+}
+
+async function cleanupUploadFiles(files = []) {
+  await Promise.all(files
+    .filter((file) => file.path)
+    .map((file) => fsPromises.unlink(file.path).catch(() => {})));
+}
+
+function cloneBodyFiles(files = []) {
+  return files.map((file) => ({ ...file }));
+}
+
 function externalFindingsFromRequest(req) {
   const rawFindings = typeof req.body?.externalFindings === 'string'
     ? JSON.parse(req.body.externalFindings)
@@ -120,7 +200,9 @@ function externalFindingsFromRequest(req) {
 
 export function createApp(options = {}) {
   const app = express();
-  const storage = options.storage || createFileStorage(options.storageDir || path.resolve('storage'));
+  const storageDir = options.storageDir || path.resolve('storage');
+  const storage = options.storage || createFileStorage(storageDir);
+  const jobs = options.jobs || createAnalysisJobStore();
 
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
@@ -144,6 +226,53 @@ export function createApp(options = {}) {
     } catch (error) {
       next(error);
     }
+  });
+
+  app.post('/api/analysis-jobs', jobUpload.array('files'), async (req, res, next) => {
+    try {
+      const job = jobs.create();
+      const externalFindings = externalFindingsFromRequest(req);
+      const bodyFiles = Array.isArray(req.body?.files) ? cloneBodyFiles(req.body.files) : [];
+      const uploadFiles = cloneUploadFiles(req.files);
+
+      res.status(202).json(createJobResponse(job));
+
+      const worker = new Worker(new URL('./analysisWorker.js', import.meta.url), {
+        workerData: { bodyFiles, externalFindings, storageDir, uploadFiles }
+      });
+      worker.on('message', (patch) => jobs.patch(job.id, patch));
+      worker.on('error', (error) => jobs.patch(job.id, { status: 'failed', progress: 100, stage: 'Failed', error: error.message }));
+      worker.on('exit', (code) => {
+        const latest = jobs.get(job.id);
+        if (code !== 0 && latest?.status !== 'failed') {
+          jobs.patch(job.id, { status: 'failed', progress: 100, stage: 'Failed', error: `Worker exited with code ${code}` });
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/api/analysis-jobs/:id', (req, res) => {
+    const job = jobs.get(req.params.id);
+    if (!job) {
+      res.status(404).json({ error: 'Analysis job not found.' });
+      return;
+    }
+    res.json(createJobResponse(job));
+  });
+
+  app.get('/api/analysis-jobs/:id/result', (req, res) => {
+    const job = jobs.get(req.params.id);
+    if (!job) {
+      res.status(404).json({ error: 'Analysis job not found.' });
+      return;
+    }
+    if (job.status !== 'completed') {
+      res.status(409).json(createJobResponse(job));
+      return;
+    }
+    res.json(job.result);
   });
 
   app.get('/api/analyses', async (_req, res, next) => {

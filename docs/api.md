@@ -46,6 +46,26 @@ Multipart upload:
 curl -F "files=@solution.zip" http://127.0.0.1:8080/api/analyses
 ```
 
+### Create Background Analysis Job
+
+Large repositories should use the job API. The request returns immediately with a job id, then the UI or client polls status until the result is ready.
+
+```bash
+curl -F "files=@solution.zip" http://127.0.0.1:8080/api/analysis-jobs
+```
+
+```http
+GET /api/analysis-jobs/:id
+GET /api/analysis-jobs/:id/result
+```
+
+Job statuses:
+
+- `queued`
+- `running`
+- `completed`
+- `failed`
+
 With external analyzer findings:
 
 ```http

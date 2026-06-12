@@ -33,6 +33,16 @@ function createMemoryStorage() {
   };
 }
 
+async function waitForJob(app, id) {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const response = await request(app).get(`/api/analysis-jobs/${id}`);
+    assert.equal(response.status, 200);
+    if (['completed', 'failed'].includes(response.body.status)) return response.body;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`Job ${id} did not finish in time`);
+}
+
 test('health endpoint responds', async () => {
   const app = createApp({ storage: createMemoryStorage() });
   const response = await request(app).get('/health');
@@ -117,6 +127,29 @@ test('creates analysis from multipart uploads with external findings', async () 
   assert.equal(response.status, 201);
   assert.ok(response.body.analysis.findings.some((finding) => finding.ruleId === 'external-boundary-risk'));
   assert.ok(response.body.analysis.dependencies.some((dependency) => dependency.to === 'payment-service'));
+});
+
+test('creates and completes background analysis job from multipart upload', async () => {
+  const app = createApp({ storage: createMemoryStorage() });
+  const createResponse = await request(app)
+    .post('/api/analysis-jobs')
+    .attach('files', Buffer.from('fetch("http://payment-service/api/payments");'), {
+      filename: 'order-service/src/client.js',
+      contentType: 'text/javascript'
+    });
+
+  assert.equal(createResponse.status, 202);
+  assert.equal(createResponse.body.status, 'queued');
+
+  const finished = await waitForJob(app, createResponse.body.id);
+  assert.equal(finished.status, 'completed');
+  assert.equal(finished.progress, 100);
+
+  const resultResponse = await request(app).get(`/api/analysis-jobs/${createResponse.body.id}/result`);
+  assert.equal(resultResponse.status, 200);
+  assert.ok(resultResponse.body.analysis.findings.length > 0);
+  assert.ok(resultResponse.body.analysis.dependencies.some((dependency) => dependency.to === 'payment-service'));
+  assert.equal(resultResponse.body.analysis.files[0].text, undefined);
 });
 
 test('rejects empty analysis request', async () => {

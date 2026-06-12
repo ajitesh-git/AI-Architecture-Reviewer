@@ -20,6 +20,8 @@ No backend or AI provider is required for the MVP.
 
 The repository now also includes a backend API for server-side analysis and persisted scan history.
 
+Large zip uploads use a background job flow in server mode so the UI can show progress while the API expands and analyzes the repository.
+
 ## Quick Start
 
 ```bash

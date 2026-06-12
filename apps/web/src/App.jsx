@@ -14,7 +14,15 @@ import { HistoryPanel } from './features/history/HistoryPanel';
 import { Improvements } from './features/recommendations/Improvements';
 import { ExternalReportsPanel } from './features/upload/ExternalReportsPanel';
 import { UploadPanel } from './features/upload/UploadPanel';
-import { API_BASE_URL, createServerAnalysis, createServerUploadAnalysis, fetchAnalysisHistory, fetchAnalysisRecord } from './services/apiClient';
+import {
+  API_BASE_URL,
+  createAnalysisJobFromSources,
+  createAnalysisJobFromUploads,
+  fetchAnalysisHistory,
+  fetchAnalysisJob,
+  fetchAnalysisJobResult,
+  fetchAnalysisRecord
+} from './services/apiClient';
 import { readExternalReports } from './services/externalReports';
 import { createUploadPreviews, expandUploads } from './services/uploadReader';
 
@@ -108,6 +116,23 @@ export function App() {
     return nextAnalysis;
   }
 
+  async function waitForAnalysisJob(jobId) {
+    let latest = await fetchAnalysisJob(jobId);
+    while (!['completed', 'failed'].includes(latest.status)) {
+      setProgress(latest.progress || 20);
+      setApiStatus(`${latest.stage || 'Analyzing'} (${latest.status})`);
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      latest = await fetchAnalysisJob(jobId);
+    }
+
+    setProgress(latest.progress || 100);
+    setApiStatus(`${latest.stage || latest.status}`);
+    if (latest.status === 'failed') {
+      throw new Error(latest.error || 'Analysis job failed.');
+    }
+    return fetchAnalysisJobResult(jobId);
+  }
+
   async function runAnalysis(files = sourceFiles, importedFindings = externalFindings, serverUploadFiles = uploadFiles) {
     if (!files.length) return;
     setAnalyzing(true);
@@ -116,10 +141,13 @@ export function App() {
 
     try {
       if (runMode === 'server') {
-        setProgress(45);
-        const record = serverUploadFiles.length
-          ? await createServerUploadAnalysis(serverUploadFiles, importedFindings)
-          : await createServerAnalysis(files, importedFindings);
+        setProgress(20);
+        setApiStatus('Creating analysis job');
+        const job = serverUploadFiles.length
+          ? await createAnalysisJobFromUploads(serverUploadFiles, importedFindings)
+          : await createAnalysisJobFromSources(files, importedFindings);
+        setApiStatus(`Queued analysis job ${job.id}`);
+        const record = await waitForAnalysisJob(job.id);
         setProgress(85);
         setAnalysis(record.analysis);
         setSelectedFindingId(record.analysis.findings[0]?.id || null);
