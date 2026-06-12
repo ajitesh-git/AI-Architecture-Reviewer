@@ -103,40 +103,44 @@ export function App() {
     const nextAnalysis = analyzeSolution(files, { externalFindings: importedFindings });
     setAnalysis(nextAnalysis);
     setSelectedFindingId(nextAnalysis.findings[0]?.id || null);
-    setAnalyzing(false);
     setApiStatus('Completed locally in browser');
+    return nextAnalysis;
   }
 
-  function runAnalysis(files = sourceFiles, importedFindings = externalFindings, serverUploadFiles = uploadFiles) {
+  async function runAnalysis(files = sourceFiles, importedFindings = externalFindings, serverUploadFiles = uploadFiles) {
     if (!files.length) return;
     setAnalyzing(true);
     setError('');
-    setProgress(10);
-    const steps = [28, 45, 68, 86, 100];
-    steps.forEach((value, index) => setTimeout(() => {
-      setProgress(value);
-      if (value === 100) {
-        if (runMode === 'server') {
-          const serverRequest = serverUploadFiles.length
-            ? createServerUploadAnalysis(serverUploadFiles, importedFindings)
-            : createServerAnalysis(files, importedFindings);
-          serverRequest
-            .then((record) => {
-              setAnalysis(record.analysis);
-              setSelectedFindingId(record.analysis.findings[0]?.id || null);
-              setApiStatus(`Saved server analysis ${record.id}`);
-              return refreshHistory();
-            })
-            .catch((err) => {
-              setError(`Server analysis failed: ${err.message}`);
-              completeLocalAnalysis(files, importedFindings);
-            })
-            .finally(() => setAnalyzing(false));
-        } else {
-          completeLocalAnalysis(files, importedFindings);
-        }
+    setProgress(15);
+
+    try {
+      if (runMode === 'server') {
+        setProgress(45);
+        const record = serverUploadFiles.length
+          ? await createServerUploadAnalysis(serverUploadFiles, importedFindings)
+          : await createServerAnalysis(files, importedFindings);
+        setProgress(85);
+        setAnalysis(record.analysis);
+        setSelectedFindingId(record.analysis.findings[0]?.id || null);
+        setApiStatus(`Saved server analysis ${record.id}`);
+        await refreshHistory();
+      } else {
+        setProgress(55);
+        completeLocalAnalysis(files, importedFindings);
       }
-    }, 240 + index * 260));
+      setProgress(100);
+    } catch (err) {
+      if (runMode === 'server') {
+        setError(`Server analysis failed: ${err.message}. Showing local result instead.`);
+        completeLocalAnalysis(files, importedFindings);
+        setProgress(100);
+      } else {
+        setError(`Local analysis failed: ${err.message}`);
+        setProgress(0);
+      }
+    } finally {
+      setAnalyzing(false);
+    }
   }
 
   function loadSample() {
