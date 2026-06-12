@@ -1,0 +1,27 @@
+# Frontend Structure
+
+The web app is organized by responsibility instead of putting product behavior in one file.
+
+```text
+apps/web/src/
+  App.jsx                    state orchestration and page composition
+  main.jsx                   React render entrypoint
+  components/
+    layout/                  shell, rail, top bar, tabs
+    score/                   reusable scorecard primitives
+  features/
+    analysis/                analysis controls and execution status
+    architecture/            architecture graph preview
+    findings/                findings table and risk summary
+    history/                 persisted server scan history
+    recommendations/         improvement recommendation panel
+    upload/                  upload and sample-loading panel
+  services/
+    apiClient.js             backend API calls
+    reportDownload.js        JSON/Markdown browser exports
+    uploadReader.js          browser file and zip expansion
+  utils/
+    format.js                shared formatting helpers
+```
+
+New UI work should land in the relevant feature folder. Cross-feature behavior should go into `services/`, shared display primitives into `components/`, and domain analysis logic into `packages/analyzer-core`.

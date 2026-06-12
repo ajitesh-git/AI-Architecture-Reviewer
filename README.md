@@ -104,6 +104,7 @@ packages/
   analyzer-core/        Reusable analyzer, scoring, rules, reports, tests
 docs/
   architecture.md        Product architecture and extension plan
+  frontend.md            Web app file boundaries
   rules.md               Anti-pattern rule model
   scoring.md             Scorecard model
 examples/
