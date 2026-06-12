@@ -6,13 +6,16 @@ export const BINARY_EXTENSIONS = [
   '.webp',
   '.ico',
   '.pdf',
+  '.xlsx',
+  '.xls',
   '.dll',
   '.exe',
   '.bin',
   '.lock',
   '.woff',
   '.woff2',
-  '.zip'
+  '.zip',
+  '.map'
 ];
 
 export const IGNORED_PATH_PARTS = [
@@ -21,6 +24,9 @@ export const IGNORED_PATH_PARTS = [
   'dist',
   'build',
   'coverage',
+  '__tests__',
+  'tests',
+  'testfiles',
   '.next',
   '.turbo',
   '.cache'

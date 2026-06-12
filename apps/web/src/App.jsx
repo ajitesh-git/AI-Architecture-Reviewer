@@ -16,7 +16,7 @@ import { ExternalReportsPanel } from './features/upload/ExternalReportsPanel';
 import { UploadPanel } from './features/upload/UploadPanel';
 import { API_BASE_URL, createServerAnalysis, createServerUploadAnalysis, fetchAnalysisHistory, fetchAnalysisRecord } from './services/apiClient';
 import { readExternalReports } from './services/externalReports';
-import { expandUploads } from './services/uploadReader';
+import { createUploadPreviews, expandUploads } from './services/uploadReader';
 
 export function App() {
   const [tab, setTab] = useState('Overview');
@@ -44,7 +44,8 @@ export function App() {
     if (!fileList?.length) return;
     setLoading(true);
     const selectedFiles = [...fileList];
-    const expanded = await expandUploads(selectedFiles);
+    const hasZip = selectedFiles.some((file) => /\.zip$/i.test(file.name));
+    const expanded = hasZip ? createUploadPreviews(selectedFiles) : await expandUploads(selectedFiles);
     setUploadFiles((current) => [...current, ...selectedFiles]);
     setSourceFiles((current) => [...current, ...expanded]);
     setAnalysis(null);
@@ -126,7 +127,10 @@ export function App() {
         await refreshHistory();
       } else {
         setProgress(55);
-        completeLocalAnalysis(files, importedFindings);
+        const localFiles = files.some((file) => file.text?.trim())
+          ? files
+          : await expandUploads(serverUploadFiles);
+        completeLocalAnalysis(localFiles, importedFindings);
       }
       setProgress(100);
     } catch (err) {

@@ -30,3 +30,11 @@ export async function expandUploads(fileList) {
   }
   return files;
 }
+
+export function createUploadPreviews(fileList) {
+  return fileList.map((file) => ({
+    name: file.webkitRelativePath || file.name,
+    size: file.size,
+    text: ''
+  }));
+}

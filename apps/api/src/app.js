@@ -23,24 +23,67 @@ const upload = multer({
 });
 
 const MAX_TEXT_FILE_BYTES = 2 * 1024 * 1024;
+const MAX_ANALYZED_FILES = 1000;
+const MAX_TOTAL_TEXT_BYTES = 10 * 1024 * 1024;
 
-async function expandUploadedFile(file) {
+function createIngestionBudget() {
+  return { files: 0, textBytes: 0, skipped: 0 };
+}
+
+function canIncludeTextArtifact(size, budget) {
+  if (size > MAX_TEXT_FILE_BYTES) return false;
+  if (budget.files >= MAX_ANALYZED_FILES) return false;
+  if (budget.textBytes + size > MAX_TOTAL_TEXT_BYTES) return false;
+  return true;
+}
+
+function includeSourceFile(file, budget) {
+  budget.files += 1;
+  budget.textBytes += file.size || file.text?.length || 0;
+  return file;
+}
+
+function createResponseRecord(record) {
+  return {
+    ...record,
+    analysis: {
+      ...record.analysis,
+      files: record.analysis.files.map((file) => ({
+        name: file.name,
+        size: file.size
+      }))
+    }
+  };
+}
+
+async function expandUploadedFile(file, budget) {
   const name = file.originalname || file.fieldname;
   if (/\.zip$/i.test(name)) {
     const zip = await JSZip.loadAsync(file.buffer);
     const files = [];
     for (const [entryName, entry] of Object.entries(zip.files)) {
       if (entry.dir || isIgnoredPath(entryName) || !isSupportedTextArtifact(entryName)) continue;
+      const estimatedSize = entry._data?.uncompressedSize || 0;
+      if (estimatedSize && !canIncludeTextArtifact(estimatedSize, budget)) {
+        budget.skipped += 1;
+        continue;
+      }
       const text = await entry.async('string').catch(() => '');
-      if (text.length > MAX_TEXT_FILE_BYTES) continue;
-      files.push(createSourceFile({ name: entryName, size: text.length, text }));
+      if (!canIncludeTextArtifact(text.length, budget)) {
+        budget.skipped += 1;
+        continue;
+      }
+      files.push(includeSourceFile(createSourceFile({ name: entryName, size: text.length, text }), budget));
     }
     return files;
   }
 
   if (isIgnoredPath(name) || !isSupportedTextArtifact(name)) return [];
-  if (file.size > MAX_TEXT_FILE_BYTES) return [];
-  return [createSourceFile({ name, size: file.size, text: file.buffer.toString('utf8') })];
+  if (!canIncludeTextArtifact(file.size, budget)) {
+    budget.skipped += 1;
+    return [];
+  }
+  return [includeSourceFile(createSourceFile({ name, size: file.size, text: file.buffer.toString('utf8') }), budget)];
 }
 
 async function sourceFilesFromRequest(req) {
@@ -49,7 +92,11 @@ async function sourceFilesFromRequest(req) {
   }
 
   if (req.files?.length) {
-    const nested = await Promise.all(req.files.map(expandUploadedFile));
+    const budget = createIngestionBudget();
+    const nested = [];
+    for (const file of req.files) {
+      nested.push(await expandUploadedFile(file, budget));
+    }
     return nested.flat();
   }
 
@@ -93,7 +140,7 @@ export function createApp(options = {}) {
       const externalFindings = externalFindingsFromRequest(req);
       const analysis = analyzeSolution(sourceFiles, { externalFindings });
       const record = await storage.saveAnalysis(analysis);
-      res.status(201).json(record);
+      res.status(201).json(createResponseRecord(record));
     } catch (error) {
       next(error);
     }
@@ -109,7 +156,7 @@ export function createApp(options = {}) {
 
   app.get('/api/analyses/:id', async (req, res, next) => {
     try {
-      res.json(await storage.getAnalysis(req.params.id));
+      res.json(createResponseRecord(await storage.getAnalysis(req.params.id)));
     } catch (error) {
       if (error.code === 'ENOENT') res.status(404).json({ error: 'Analysis not found.' });
       else next(error);
