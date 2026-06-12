@@ -10,6 +10,15 @@ export {
 export { extractCalls, inferDatastores, inferServiceName } from './graphInference.js';
 export { createExternalFinding, createRuleFinding } from './findings.js';
 export { normalizeExternalFindings, normalizeExternalReport } from './externalFindings.js';
+export {
+  detectLanguage,
+  parseCSharpAst,
+  parseJavaScriptAst,
+  parseJsonAst,
+  parseSourceAst,
+  parseSourceAsts,
+  parseSqlAst
+} from './ast/index.js';
 export { analyzeSolution } from './analyzer.js';
 export { calculateScores } from './scorecard.js';
 export { createRecommendations } from './recommendations.js';

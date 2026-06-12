@@ -52,3 +52,7 @@ packages/report-generator/
 ```
 
 Future packages should add shared API contracts and report rendering beyond the current JSON/Markdown exports.
+
+## AST Layer
+
+`packages/analyzer-core/src/ast` owns language-aware AST extraction. It currently produces compact, browser-safe AST summaries for C#, SQL, T-SQL, stored procedure scripts, TypeScript, JavaScript, and JSON. The AST layer is intentionally separated from scoring rules so future parser upgrades can happen one language at a time without rewriting the API, CLI, or UI contracts.

@@ -1,6 +1,7 @@
 import { createRuleFinding } from './findings.js';
 import { extractCalls, inferDatastores, inferServiceName } from './graphInference.js';
 import { normalizeExternalFindings } from './externalFindings.js';
+import { parseSourceAsts } from './ast/index.js';
 import { calculateScores } from './scorecard.js';
 import { createRecommendations } from './recommendations.js';
 
@@ -88,6 +89,7 @@ export function analyzeSolution(sourceFiles, options = {}) {
 
   const importedFindings = normalizeExternalFindings(options.externalFindings || [], 'external');
   findings.push(...importedFindings);
+  const asts = parseSourceAsts(readable);
 
   const scores = calculateScores({ findings, edges, serviceCount: services.size });
   const recommendations = createRecommendations(findings);
@@ -95,6 +97,7 @@ export function analyzeSolution(sourceFiles, options = {}) {
   return {
     files: sourceFiles,
     services: [...services.values()],
+    asts,
     datastores: [...new Set([...datastoresByService.values()].flatMap((set) => [...set]))],
     edges,
     findings,
