@@ -12,7 +12,7 @@ function formatLocation(dependency) {
   return dependency.line ? `${dependency.file}:${dependency.line}` : dependency.file;
 }
 
-export function DependenciesPanel({ dependencies, total, onLoadMore }) {
+export function DependenciesPanel({ dependencies, total, onLoadMore, actionLabel = 'View more evidence' }) {
   const visible = dependencies;
   const hasMore = dependencies.length < total;
   return (
@@ -46,7 +46,7 @@ export function DependenciesPanel({ dependencies, total, onLoadMore }) {
       </table>
       <div className="panel-foot">
         <span>{total ? `1-${visible.length} of ${total}` : '0 dependencies'}</span>
-        <button disabled={!hasMore} onClick={onLoadMore}>View more evidence <ChevronRight size={15} /></button>
+        <button disabled={!hasMore && actionLabel === 'View more evidence'} onClick={onLoadMore}>{actionLabel} <ChevronRight size={15} /></button>
       </div>
     </section>
   );

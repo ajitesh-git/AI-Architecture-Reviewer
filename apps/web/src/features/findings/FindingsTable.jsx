@@ -1,7 +1,7 @@
 import { AlertTriangle, ChevronDown, ChevronRight, Download, Filter } from 'lucide-react';
 import { downloadReport } from '../../services/reportDownload';
 
-export function FindingsTable({ findings, total, analysis, selectedFindingId, onSelectFinding, onLoadMore }) {
+export function FindingsTable({ findings, total, analysis, selectedFindingId, onSelectFinding, onLoadMore, actionLabel = 'View more findings' }) {
   const visible = findings;
   const hasMore = findings.length < total;
   return (
@@ -40,7 +40,7 @@ export function FindingsTable({ findings, total, analysis, selectedFindingId, on
       </table>
       <div className="panel-foot">
         <span>{total ? `1-${visible.length} of ${total}` : '0 findings'}</span>
-        <button disabled={!hasMore} onClick={onLoadMore}>View more findings <ChevronRight size={15} /></button>
+        <button disabled={!hasMore && actionLabel === 'View more findings'} onClick={onLoadMore}>{actionLabel} <ChevronRight size={15} /></button>
       </div>
     </section>
   );

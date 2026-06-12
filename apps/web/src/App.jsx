@@ -29,7 +29,7 @@ import { readExternalReports } from './services/externalReports';
 import { createUploadPreviews, expandUploads } from './services/uploadReader';
 
 export function App() {
-  const [tab, setTab] = useState('Overview');
+  const [activePage, setActivePage] = useState('Overview');
   const [sourceFiles, setSourceFiles] = useState([]);
   const [uploadFiles, setUploadFiles] = useState([]);
   const [externalReports, setExternalReports] = useState([]);
@@ -54,6 +54,10 @@ export function App() {
   const selectedFinding = findings.find((finding) => finding.id === selectedFindingId) || findings[0] || null;
   const findingTotal = analysis?.totals?.findings ?? findings.length;
   const dependencyTotal = analysis?.totals?.dependencies ?? dependencies.length;
+  const overviewFindings = findings.slice(0, 6);
+  const overviewDependencies = dependencies.slice(0, 6);
+  const primaryTab = ['Overview', 'Findings', 'Scorecard'].includes(activePage) ? activePage : '';
+  const showRightColumn = activePage === 'Overview';
 
   function applyAnalysisRecord(record) {
     setAnalysis(record.analysis);
@@ -218,12 +222,29 @@ export function App() {
     setError('');
   }
 
+  function clearExternalReports() {
+    setExternalReports([]);
+    setExternalFindings([]);
+    setAnalysis(null);
+    setAnalysisId(null);
+    setSelectedFindingId(null);
+    setProgress(0);
+  }
+
+  function navigateToPage(page) {
+    setActivePage(page);
+  }
+
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('sample') === '1') {
       loadSample();
     }
     refreshHistory();
   }, []);
+
+  useEffect(() => {
+    document.querySelector('.content')?.scrollTo({ top: 0, left: 0 });
+  }, [activePage]);
 
   async function loadMoreFindings() {
     if (!analysisId || findings.length >= findingTotal) return;
@@ -247,41 +268,109 @@ export function App() {
     setDependencyPage(nextPage);
   }
 
+  const uploadAndAnalyze = (
+    <div className="top-grid">
+      <div className="ingest-column">
+        <UploadPanel sourceFiles={sourceFiles} onFiles={handleFiles} onSample={loadSample} onClear={clearAll} loading={loading} />
+        <ExternalReportsPanel externalReports={externalReports} externalFindings={externalFindings} onReports={handleExternalReports} onClear={clearExternalReports} />
+      </div>
+      <ArchitectureView analysis={analysis} />
+      <AnalyzePanel analysis={analysis} sourceFiles={sourceFiles} analyzing={analyzing} progress={progress} onAnalyze={() => runAnalysis()} runMode={runMode} setRunMode={setRunMode} apiStatus={apiStatus} error={error} />
+    </div>
+  );
+
+  const pageContent = {
+    Overview: (
+      <>
+        {uploadAndAnalyze}
+        <div className="bottom-grid overview-grid">
+          <FindingsTable
+            findings={overviewFindings}
+            total={findingTotal}
+            analysis={analysis}
+            selectedFindingId={selectedFinding?.id}
+            onSelectFinding={(finding) => setSelectedFindingId(finding.id)}
+            onLoadMore={() => navigateToPage('Findings')}
+            actionLabel="Open Findings"
+          />
+          <Improvements recommendations={recommendations.slice(0, 6)} />
+          <DependenciesPanel
+            dependencies={overviewDependencies}
+            total={dependencyTotal}
+            onLoadMore={() => navigateToPage('Architecture')}
+            actionLabel="Open Architecture"
+          />
+        </div>
+      </>
+    ),
+    Findings: (
+      <div className="page-grid findings-page">
+        <FindingsTable
+          findings={findings}
+          total={findingTotal}
+          analysis={analysis}
+          selectedFindingId={selectedFinding?.id}
+          onSelectFinding={(finding) => setSelectedFindingId(finding.id)}
+          onLoadMore={loadMoreFindings}
+        />
+        <FindingDetailPanel analysis={analysis} finding={selectedFinding} />
+      </div>
+    ),
+    Scorecard: (
+      <div className="page-grid scorecard-page">
+        <Scorecard analysis={analysis} />
+        <RiskSummary findings={findings} />
+        <Improvements recommendations={recommendations} />
+      </div>
+    ),
+    Architecture: (
+      <div className="page-stack">
+        <ArchitectureView analysis={analysis} />
+        <DependenciesPanel dependencies={dependencies} total={dependencyTotal} onLoadMore={loadMoreDependencies} />
+      </div>
+    ),
+    Reports: (
+      <div className="page-stack narrow-page">
+        <ExternalReportsPanel externalReports={externalReports} externalFindings={externalFindings} onReports={handleExternalReports} onClear={clearExternalReports} />
+      </div>
+    ),
+    History: (
+      <div className="page-stack narrow-page">
+        <HistoryPanel history={history} loading={historyLoading} onRefresh={refreshHistory} onOpen={openHistoryRecord} />
+      </div>
+    ),
+    Settings: (
+      <div className="page-stack narrow-page">
+        <section className="panel settings-panel">
+          <h2>Settings</h2>
+          <div className="settings-list">
+            <div><span>API endpoint</span><strong>{API_BASE_URL}</strong></div>
+            <div><span>Default execution</span><strong>{runMode === 'server' ? 'Server' : 'Local browser'}</strong></div>
+            <div><span>Loaded artifacts</span><strong>{sourceFiles.length}</strong></div>
+          </div>
+        </section>
+      </div>
+    )
+  };
+
   return (
     <main className="app">
-      <LeftRail findingCount={findings.length} />
+      <LeftRail findingCount={findingTotal} activeItem={activePage} onNavigate={navigateToPage} />
       <div className="workspace">
         <TopBar analysis={analysis} />
-        <Tabs tab={tab} setTab={setTab} />
-        <div className="content">
+        <Tabs tab={primaryTab} setTab={navigateToPage} />
+        <div className={`content ${showRightColumn ? '' : 'single-column'}`}>
           <div className="main-column">
-            <div className="top-grid">
-              <div className="ingest-column">
-                <UploadPanel sourceFiles={sourceFiles} onFiles={handleFiles} onSample={loadSample} onClear={clearAll} loading={loading} />
-                <ExternalReportsPanel externalReports={externalReports} externalFindings={externalFindings} onReports={handleExternalReports} onClear={() => {
-                  setExternalReports([]);
-                  setExternalFindings([]);
-                  setAnalysis(null);
-                  setAnalysisId(null);
-                  setSelectedFindingId(null);
-                  setProgress(0);
-                }} />
-              </div>
-              <ArchitectureView analysis={analysis} />
-              <AnalyzePanel analysis={analysis} sourceFiles={sourceFiles} analyzing={analyzing} progress={progress} onAnalyze={() => runAnalysis()} runMode={runMode} setRunMode={setRunMode} apiStatus={apiStatus} error={error} />
-            </div>
-            <div className="bottom-grid">
-              <FindingsTable findings={findings} total={findingTotal} analysis={analysis} selectedFindingId={selectedFinding?.id} onSelectFinding={(finding) => setSelectedFindingId(finding.id)} onLoadMore={loadMoreFindings} />
-              <Improvements recommendations={recommendations} />
-              <DependenciesPanel dependencies={dependencies} total={dependencyTotal} onLoadMore={loadMoreDependencies} />
-            </div>
+            {pageContent[activePage] || pageContent.Overview}
           </div>
-          <aside className="right-column">
-            <Scorecard analysis={analysis} />
-            <FindingDetailPanel analysis={analysis} finding={selectedFinding} />
-            <RiskSummary findings={findings} />
-            <HistoryPanel history={history} loading={historyLoading} onRefresh={refreshHistory} onOpen={openHistoryRecord} />
-          </aside>
+          {showRightColumn && (
+            <aside className="right-column">
+              <Scorecard analysis={analysis} />
+              <FindingDetailPanel analysis={analysis} finding={selectedFinding} />
+              <RiskSummary findings={findings} />
+              <HistoryPanel history={history} loading={historyLoading} onRefresh={refreshHistory} onOpen={openHistoryRecord} />
+            </aside>
+          )}
         </div>
       </div>
     </main>

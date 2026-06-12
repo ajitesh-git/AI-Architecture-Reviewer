@@ -1,13 +1,13 @@
 import { Boxes, Minus } from 'lucide-react';
 import { navItems } from './navigation';
 
-export function LeftRail({ findingCount }) {
+export function LeftRail({ findingCount, activeItem, onNavigate }) {
   return (
     <aside className="rail">
       <div className="brand-mark"><Boxes size={22} /></div>
       <nav>
-        {navItems.map(([label, Icon], index) => (
-          <button className={index === 0 ? 'active' : ''} key={label}>
+        {navItems.map(([label, Icon]) => (
+          <button className={activeItem === label ? 'active' : ''} key={label} onClick={() => onNavigate(label)}>
             <span className="nav-icon">
               <Icon size={20} />
               {label === 'Findings' && findingCount > 0 && <b>{findingCount}</b>}

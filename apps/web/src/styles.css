@@ -23,8 +23,9 @@ button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .55; }
 
 .app {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
+  overflow: hidden;
   background:
     radial-gradient(circle at 65% 4%, rgba(13, 92, 232, .055), transparent 24rem),
     #f6f8fb;
@@ -32,7 +33,7 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 
 .rail {
   width: 94px;
-  min-height: 100vh;
+  height: 100vh;
   background: linear-gradient(180deg, #06284c 0%, #001b36 100%);
   color: #dceafe;
   display: flex;
@@ -125,7 +126,13 @@ button:disabled { cursor: not-allowed; opacity: .55; }
   height: 27px;
 }
 
-.workspace { flex: 1; min-width: 0; }
+.workspace {
+  flex: 1;
+  min-width: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 
 .topbar {
   height: 78px;
@@ -231,6 +238,12 @@ button:disabled { cursor: not-allowed; opacity: .55; }
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 18px;
   padding: 20px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.content.single-column {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .main-column {
@@ -254,6 +267,76 @@ button:disabled { cursor: not-allowed; opacity: .55; }
   grid-template-columns: minmax(0, 1.25fr) minmax(380px, .9fr);
   gap: 14px;
   margin-top: 18px;
+}
+
+.overview-grid .table-panel table tbody tr:nth-child(n + 7),
+.overview-grid .dependencies-table tbody tr:nth-child(n + 7) {
+  display: none;
+}
+
+.page-grid {
+  display: grid;
+  gap: 18px;
+  align-items: start;
+}
+
+.findings-page {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+}
+
+.scorecard-page {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.scorecard-page .rec-panel {
+  grid-column: 1 / -1;
+}
+
+.page-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.narrow-page {
+  max-width: 980px;
+}
+
+.page-stack .arch-panel,
+.page-stack .external-panel {
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.settings-panel {
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.settings-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.settings-list div {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  min-height: 46px;
+  border-top: 1px solid #e2e7ef;
+  color: #26354d;
+}
+
+.settings-list span {
+  color: #657187;
+  font-size: 13px;
+}
+
+.settings-list strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
 }
 
 .panel {
