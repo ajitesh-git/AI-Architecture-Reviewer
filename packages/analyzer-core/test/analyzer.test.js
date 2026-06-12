@@ -25,6 +25,7 @@ test('analyzes sample solution and returns findings and scores', () => {
   const analysis = analyzeSolution(SAMPLE_FILES);
   assert.equal(analysis.files.length, 4);
   assert.ok(analysis.services.length >= 3);
+  assert.ok(analysis.dependencies.some((dependency) => dependency.type === 'call'));
   assert.ok(analysis.findings.some((finding) => finding.ruleId === 'hardcoded-secret'));
   assert.ok(analysis.findings.some((finding) => finding.ruleId === 'missing-timeouts-and-retries'));
   assert.ok(analysis.overall > 0);

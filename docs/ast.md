@@ -47,6 +47,7 @@ The analyzer now uses AST nodes before text fallback when building architecture 
 - C# `InvocationExpression` nodes can produce call dependencies when names indicate service/client boundaries.
 - SQL/T-SQL/proc `TableReference` nodes produce datastore dependencies.
 - SQL/T-SQL/proc `ProcedureCall` nodes produce stored procedure dependencies.
+- Text-discovered service references still produce call dependencies as fallback evidence.
 
 These inferred dependencies are returned in `analysis.dependencies[]` with `from`, `to`, `type`, `via`, `file`, and optional `line`.
 

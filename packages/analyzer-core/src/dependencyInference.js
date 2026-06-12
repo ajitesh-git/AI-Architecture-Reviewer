@@ -72,3 +72,13 @@ export function extractCallsFromAst(ast) {
     .filter(Boolean))];
 }
 
+export function createTextCallDependency(serviceName, file, target) {
+  const cleanedTarget = cleanName(target.replace(/^https?:\/\//, '').split(/[/:]/)[0]);
+  return {
+    from: serviceName,
+    to: cleanedTarget,
+    type: 'call',
+    via: 'text-service-reference',
+    file: file.name
+  };
+}

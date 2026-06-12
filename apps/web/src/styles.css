@@ -761,11 +761,16 @@ h2 span {
   border-left-color: transparent;
 }
 
-.table-panel, .rec-panel {
+.table-panel, .rec-panel, .dependencies-panel {
   margin-top: 0;
   border-radius: 8px;
   padding: 16px 18px;
   min-height: 420px;
+}
+
+.dependencies-panel {
+  grid-column: 1 / -1;
+  min-height: 320px;
 }
 
 .panel-title > div {
@@ -837,6 +842,35 @@ input[type="checkbox"] {
 .severity.critical { color: #cf2b2b; background: #fff0f0; }
 .severity.high { color: #e56920; background: #fff3e8; }
 .severity.medium { color: #a97800; background: #fff7da; }
+
+.dependencies-table td {
+  height: 48px;
+}
+
+.dependencies-table td:nth-child(2),
+.dependencies-table td:nth-child(3),
+.dependencies-table td:nth-child(4) {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dependency-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: capitalize;
+}
+
+.dependency-type.module { color: #5b47ce; background: #f1eeff; }
+.dependency-type.call { color: #075dec; background: #edf4ff; }
+.dependency-type.datastore { color: #098964; background: #e8faf4; }
+.dependency-type.procedure { color: #a06100; background: #fff3da; }
 
 .panel-foot {
   height: 62px;

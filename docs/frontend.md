@@ -12,6 +12,7 @@ apps/web/src/
   features/
     analysis/                analysis controls and execution status
     architecture/            architecture graph preview
+    dependencies/            dependency evidence table
     findings/                findings table and risk summary
                               finding detail panel and selected finding workflow
     history/                 persisted server scan history

@@ -1,5 +1,5 @@
 import { createRuleFinding } from './findings.js';
-import { extractAstDependencies, extractCallsFromAst, extractDatastoresFromAst } from './dependencyInference.js';
+import { createTextCallDependency, extractAstDependencies, extractCallsFromAst, extractDatastoresFromAst } from './dependencyInference.js';
 import { extractCalls, inferDatastores, inferServiceName } from './graphInference.js';
 import { normalizeExternalFindings } from './externalFindings.js';
 import { parseSourceAsts } from './ast/index.js';
@@ -33,7 +33,10 @@ export function analyzeSolution(sourceFiles, options = {}) {
 
     const calls = [...new Set([...extractCalls(file.text), ...extractCallsFromAst(ast)])];
     stats.calls += calls.length;
-    calls.forEach((target) => edges.push({ from: service, to: target.replace(/^https?:\/\//, '').split(/[/:]/)[0] }));
+    calls.forEach((target) => {
+      edges.push({ from: service, to: target.replace(/^https?:\/\//, '').split(/[/:]/)[0] });
+      dependencies.push(createTextCallDependency(service, file, target));
+    });
 
     if (/(password|secret|apikey|api_key|accesskey|connectionstring)\s*[:=]\s*["'][^"']{6,}/i.test(file.text)) {
       createRuleFinding(findings, 'hardcoded-secret', file.name, 'High', 'High', 'Credential-like value found in source/config text.');
@@ -105,7 +108,7 @@ export function analyzeSolution(sourceFiles, options = {}) {
     files: sourceFiles,
     services: [...services.values()],
     asts,
-    dependencies,
+    dependencies: [...new Map(dependencies.map((item) => [`${item.from}:${item.to}:${item.type}:${item.file}:${item.line || ''}`, item])).values()],
     datastores: [...new Set([...datastoresByService.values()].flatMap((set) => [...set]))],
     edges,
     findings,

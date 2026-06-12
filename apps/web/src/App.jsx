@@ -6,6 +6,7 @@ import { TopBar } from './components/layout/TopBar';
 import { Scorecard } from './components/score/Scorecard';
 import { AnalyzePanel } from './features/analysis/AnalyzePanel';
 import { ArchitectureView } from './features/architecture/ArchitectureView';
+import { DependenciesPanel } from './features/dependencies/DependenciesPanel';
 import { FindingDetailPanel } from './features/findings/FindingDetailPanel';
 import { FindingsTable } from './features/findings/FindingsTable';
 import { RiskSummary } from './features/findings/RiskSummary';
@@ -35,6 +36,7 @@ export function App() {
 
   const findings = analysis?.findings || [];
   const recommendations = analysis?.recommendations || [];
+  const dependencies = analysis?.dependencies || [];
   const selectedFinding = findings.find((finding) => finding.id === selectedFindingId) || findings[0] || null;
 
   async function handleFiles(fileList) {
@@ -184,6 +186,7 @@ export function App() {
             <div className="bottom-grid">
               <FindingsTable findings={findings} analysis={analysis} selectedFindingId={selectedFinding?.id} onSelectFinding={(finding) => setSelectedFindingId(finding.id)} />
               <Improvements recommendations={recommendations} />
+              <DependenciesPanel dependencies={dependencies} />
             </div>
           </div>
           <aside className="right-column">
