@@ -3,29 +3,34 @@ import { Minus, Plus } from 'lucide-react';
 export function ArchitectureView({ analysis }) {
   const services = analysis?.services?.slice(0, 6) || [];
   const datastores = analysis?.datastores?.slice(0, 3) || [];
+  const datastoreStep = datastores.length > 1 ? 56 / (datastores.length - 1) : 0;
   return (
     <section className="panel arch-panel">
-      <div className="panel-title"><h2>Architecture View</h2></div>
-      <div className="mode-tabs">
-        {['System Context', 'Containers', 'Components', 'Deployment'].map((mode, index) => (
-          <button className={index === 1 ? 'active' : ''} key={mode}>{mode}</button>
-        ))}
-      </div>
-      <div className="canvas dynamic-canvas">
+      <div className="architecture-header">
+        <div>
+          <h2>Architecture View</h2>
+          <div className="mode-tabs">
+            {['System Context', 'Containers', 'Components', 'Deployment'].map((mode, index) => (
+              <button className={index === 1 ? 'active' : ''} key={mode}>{mode}</button>
+            ))}
+          </div>
+        </div>
         <div className="legend">
           <span><i className="solid" /> Service</span>
           <span><i className="dash" /> Call</span>
           <span><i className="store" /> Data Store</span>
           <span><i className="risk" /> Finding</span>
         </div>
+      </div>
+      <div className="canvas dynamic-canvas">
         {services.length === 0 && <div className="empty-graph">Upload a solution and run analysis to build the architecture map.</div>}
         {services.map((service, index) => (
-          <div className="node graph-node" style={{ '--x': `${22 + (index % 3) * 28}%`, '--y': `${132 + Math.floor(index / 3) * 96}px` }} key={service.name}>
+          <div className="node graph-node" style={{ '--x': `${24 + (index % 3) * 26}%`, '--y': `${106 + Math.floor(index / 3) * 86}px` }} key={service.name}>
             {service.name}<small>{service.files} files</small>
           </div>
         ))}
         {datastores.map((store, index) => (
-          <div className="db graph-db" style={{ '--x': `${25 + index * 26}%`, '--y': '322px' }} key={store}>{store}</div>
+          <div className="db graph-db" style={{ '--x': `${datastores.length > 1 ? 22 + index * datastoreStep : 50}%`, '--y': '260px' }} key={store}>{store}</div>
         ))}
         <svg className="links" viewBox="0 0 720 430" preserveAspectRatio="none">
           {services.slice(0, 5).map((_, index) => <path key={index} d={`M${170 + index * 82} 185 L${210 + index * 70} 315`} className={index % 2 ? 'dash' : ''} />)}
