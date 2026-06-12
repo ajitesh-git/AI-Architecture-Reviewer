@@ -23,6 +23,8 @@ Additional progress: `apps/cli` now runs the shared analyzer against local folde
 
 Additional progress: `apps/api` now provides server-side analysis, multipart/JSON ingestion, persisted scan records, analysis history, and JSON/Markdown report endpoints.
 
+Additional progress: `apps/web` can now run server-side analysis through the API, show persisted analysis history, and fall back to local analysis if the API is unavailable.
+
 ## v0.3 Backend Worker
 
 - Add API service

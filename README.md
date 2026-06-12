@@ -58,6 +58,26 @@ Analyze a zip upload:
 curl -F "files=@solution.zip" http://127.0.0.1:8080/api/analyses
 ```
 
+## Web + API Mode
+
+The web app can run analysis in two modes:
+
+- `Server`: sends parsed artifacts to `VITE_API_BASE_URL`, persists the scan, and shows analysis history.
+- `Local`: runs analysis fully in the browser.
+
+Start both services in separate terminals:
+
+```bash
+npm run dev:api
+npm run dev
+```
+
+Set a custom API URL with:
+
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:8080 npm run dev
+```
+
 ## CLI Usage
 
 Analyze a local folder or `.zip` file from the terminal:

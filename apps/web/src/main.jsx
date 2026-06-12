@@ -37,6 +37,8 @@ import {
 } from '@ai-architecture-reviewer/analyzer-core';
 import './styles.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8080';
+
 const navItems = [
   ['Overview', Layers3],
   ['Findings', AlertTriangle],
@@ -91,6 +93,31 @@ function downloadReport(analysis, format) {
   link.download = `architecture-review-${Date.now()}.${isMarkdown ? 'md' : 'json'}`;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+async function createServerAnalysis(sourceFiles) {
+  const response = await fetch(`${API_BASE_URL}/api/analyses`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ files: sourceFiles })
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.error || `Analysis API returned ${response.status}`);
+  }
+  return response.json();
+}
+
+async function fetchAnalysisHistory() {
+  const response = await fetch(`${API_BASE_URL}/api/analyses`);
+  if (!response.ok) throw new Error(`History API returned ${response.status}`);
+  return response.json();
+}
+
+async function fetchAnalysisRecord(id) {
+  const response = await fetch(`${API_BASE_URL}/api/analyses/${id}`);
+  if (!response.ok) throw new Error(`Analysis API returned ${response.status}`);
+  return response.json();
 }
 
 function ScoreRing({ value, label }) {
@@ -244,7 +271,7 @@ function ArchitectureView({ analysis }) {
   );
 }
 
-function AnalyzePanel({ analysis, sourceFiles, analyzing, progress, onAnalyze }) {
+function AnalyzePanel({ analysis, sourceFiles, analyzing, progress, onAnalyze, runMode, setRunMode, apiStatus, error }) {
   const canAnalyze = sourceFiles.length > 0 && !analyzing;
   return (
     <section className="panel analyze-panel">
@@ -253,6 +280,12 @@ function AnalyzePanel({ analysis, sourceFiles, analyzing, progress, onAnalyze })
       <div className="segment">
         {['Quick', 'Standard', 'Deep'].map((mode, index) => <button className={index === 1 ? 'active' : ''} key={mode}>{mode}</button>)}
       </div>
+      <span className="label">Execution</span>
+      <div className="segment execution-segment">
+        {['Server', 'Local'].map((mode) => (
+          <button className={runMode === mode.toLowerCase() ? 'active' : ''} onClick={() => setRunMode(mode.toLowerCase())} key={mode}>{mode}</button>
+        ))}
+      </div>
       <button className="primary" onClick={onAnalyze} disabled={!canAnalyze}><Play size={17} /> Analyze</button>
       <div className="progress-head">
         <span>{analyzing ? 'Analysing architecture...' : analysis ? 'Analysis complete' : 'Waiting for upload'}</span>
@@ -260,11 +293,37 @@ function AnalyzePanel({ analysis, sourceFiles, analyzing, progress, onAnalyze })
       </div>
       <div className="progress"><i style={{ width: `${progress}%` }} /></div>
       <p>{analysis ? `${analysis.files.length} artifacts, ${analysis.services.length} services, ${analysis.findings.length} findings` : 'Upload a solution to run 35 architecture checks.'}</p>
+      <p className={`api-status ${error ? 'error' : ''}`}>{error || apiStatus}</p>
       {['Parsing artifacts', 'Building model', 'Detecting anti-patterns', 'Evaluating quality', 'Generating scorecard'].map((item, index) => (
         <div className={`check ${progress >= (index + 1) * 20 ? 'done' : analyzing && progress >= index * 20 ? 'current' : ''}`} key={item}>
           <span>{progress >= (index + 1) * 20 ? <Check size={14} /> : ''}</span>{item}
         </div>
       ))}
+    </section>
+  );
+}
+
+function HistoryPanel({ history, loading, onRefresh, onOpen }) {
+  return (
+    <section className="panel history-panel">
+      <div className="panel-title">
+        <h2>Analysis History <span>{history.length}</span></h2>
+        <button className="tool" onClick={onRefresh} disabled={loading}><History size={14} /> Refresh</button>
+      </div>
+      <div className="history-list">
+        {history.slice(0, 6).map((item) => (
+          <button className="history-row" onClick={() => onOpen(item.id)} key={item.id}>
+            <span>
+              <strong>{item.overall}/100</strong>
+              <small>{new Date(item.createdAt).toLocaleString()}</small>
+            </span>
+            <span>{item.files} files</span>
+            <span>{item.findings} findings</span>
+            <ChevronRight size={15} />
+          </button>
+        ))}
+        {history.length === 0 && <p className="empty-note">Server-side scans will appear here after the API creates persisted analysis records.</p>}
+      </div>
     </section>
   );
 }
@@ -368,6 +427,11 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [runMode, setRunMode] = useState('server');
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [apiStatus, setApiStatus] = useState(`Server: ${API_BASE_URL}`);
+  const [error, setError] = useState('');
 
   const findings = analysis?.findings || [];
   const recommendations = analysis?.recommendations || [];
@@ -379,19 +443,66 @@ function App() {
     setSourceFiles((current) => [...current, ...expanded]);
     setAnalysis(null);
     setProgress(0);
+    setError('');
     setLoading(false);
+  }
+
+  async function refreshHistory() {
+    setHistoryLoading(true);
+    setError('');
+    try {
+      setHistory(await fetchAnalysisHistory());
+      setApiStatus(`Connected: ${API_BASE_URL}`);
+    } catch (err) {
+      setError(`API unavailable: ${err.message}`);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  async function openHistoryRecord(id) {
+    setError('');
+    try {
+      const record = await fetchAnalysisRecord(id);
+      setAnalysis(record.analysis);
+      setSourceFiles(record.analysis.files);
+      setProgress(100);
+      setApiStatus(`Loaded server analysis ${record.id}`);
+    } catch (err) {
+      setError(`Could not load analysis: ${err.message}`);
+    }
+  }
+
+  function completeLocalAnalysis(files) {
+    setAnalysis(analyzeSolution(files));
+    setAnalyzing(false);
+    setApiStatus('Completed locally in browser');
   }
 
   function runAnalysis(files = sourceFiles) {
     if (!files.length) return;
     setAnalyzing(true);
+    setError('');
     setProgress(10);
     const steps = [28, 45, 68, 86, 100];
     steps.forEach((value, index) => setTimeout(() => {
       setProgress(value);
       if (value === 100) {
-        setAnalysis(analyzeSolution(files));
-        setAnalyzing(false);
+        if (runMode === 'server') {
+          createServerAnalysis(files)
+            .then((record) => {
+              setAnalysis(record.analysis);
+              setApiStatus(`Saved server analysis ${record.id}`);
+              return refreshHistory();
+            })
+            .catch((err) => {
+              setError(`Server analysis failed: ${err.message}`);
+              completeLocalAnalysis(files);
+            })
+            .finally(() => setAnalyzing(false));
+        } else {
+          completeLocalAnalysis(files);
+        }
       }
     }, 240 + index * 260));
   }
@@ -408,12 +519,14 @@ function App() {
     setAnalysis(null);
     setProgress(0);
     setAnalyzing(false);
+    setError('');
   }
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('sample') === '1') {
       loadSample();
     }
+    refreshHistory();
   }, []);
 
   return (
@@ -427,7 +540,7 @@ function App() {
             <div className="top-grid">
               <UploadPanel sourceFiles={sourceFiles} onFiles={handleFiles} onSample={loadSample} onClear={clearAll} loading={loading} />
               <ArchitectureView analysis={analysis} />
-              <AnalyzePanel analysis={analysis} sourceFiles={sourceFiles} analyzing={analyzing} progress={progress} onAnalyze={() => runAnalysis()} />
+              <AnalyzePanel analysis={analysis} sourceFiles={sourceFiles} analyzing={analyzing} progress={progress} onAnalyze={() => runAnalysis()} runMode={runMode} setRunMode={setRunMode} apiStatus={apiStatus} error={error} />
             </div>
             <div className="bottom-grid">
               <FindingsTable findings={findings} analysis={analysis} />
@@ -437,6 +550,7 @@ function App() {
           <aside className="right-column">
             <Scorecard analysis={analysis} />
             <RiskSummary findings={findings} />
+            <HistoryPanel history={history} loading={historyLoading} onRefresh={refreshHistory} onOpen={openHistoryRecord} />
           </aside>
         </div>
       </div>
