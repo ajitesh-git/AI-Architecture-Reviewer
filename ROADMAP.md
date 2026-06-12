@@ -21,6 +21,8 @@ Status: in progress. `packages/analyzer-core` now owns the MVP analyzer, rule me
 
 Additional progress: `apps/cli` now runs the shared analyzer against local folders or zip files and can output JSON or Markdown reports.
 
+Additional progress: `apps/api` now provides server-side analysis, multipart/JSON ingestion, persisted scan records, analysis history, and JSON/Markdown report endpoints.
+
 ## v0.3 Backend Worker
 
 - Add API service

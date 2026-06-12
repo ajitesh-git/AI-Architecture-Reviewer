@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "dev": "npm run dev -w apps/web",
+    "dev:api": "npm run dev -w apps/api",
     "build": "npm run build -w apps/web",
     "preview": "npm run preview -w apps/web",
     "test": "npm test --workspaces --if-present",

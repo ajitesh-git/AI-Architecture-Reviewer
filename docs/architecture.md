@@ -30,6 +30,17 @@ Object storage stores uploaded packages and generated reports.
 Redis backs queue/cache behavior.
 ```
 
+## Current Backend Slice
+
+`apps/api` is the first product backend. It supports:
+
+- `POST /api/analyses` for JSON and multipart uploads
+- `.zip` expansion
+- server-side analyzer execution through `packages/analyzer-core`
+- persisted JSON scan records
+- analysis history
+- JSON and Markdown report endpoints
+
 ## Package Direction
 
 Analyzer logic now lives in `packages/analyzer-core` so the same engine can be reused by the browser app, a future backend worker, or a CLI.

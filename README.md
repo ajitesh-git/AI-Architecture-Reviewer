@@ -15,6 +15,8 @@ This repository starts with a working web MVP:
 
 No backend or AI provider is required for the MVP.
 
+The repository now also includes a backend API for server-side analysis and persisted scan history.
+
 ## Quick Start
 
 ```bash
@@ -32,6 +34,28 @@ To build the production app:
 
 ```bash
 npm run build
+```
+
+## API Usage
+
+Start the backend service:
+
+```bash
+npm run dev:api
+```
+
+Analyze JSON source artifacts:
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/analyses \
+  -H "Content-Type: application/json" \
+  -d "{\"files\":[{\"name\":\"payment-service/app.js\",\"text\":\"const password = \\\"sample-secret\\\";\"}]}"
+```
+
+Analyze a zip upload:
+
+```bash
+curl -F "files=@solution.zip" http://127.0.0.1:8080/api/analyses
 ```
 
 ## CLI Usage
@@ -54,6 +78,7 @@ If `--out` is omitted, the report is printed to stdout.
 ```text
 apps/
   web/                  React + Vite web application
+  api/                  Express API for server-side analysis and persisted history
   cli/                  Node CLI for local folder and zip analysis
 packages/
   analyzer-core/        Reusable analyzer, scoring, rules, reports, tests

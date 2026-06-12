@@ -5,3 +5,15 @@ services:
       dockerfile: docker/web.Dockerfile
     ports:
       - "8080:80"
+  api:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev:api"
+    ports:
+      - "8081:8080"
+    volumes:
+      - .:/app
+      - api-storage:/app/storage
+
+volumes:
+  api-storage:
