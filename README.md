@@ -12,6 +12,18 @@ This project is built as a real product, not a mockup: it includes a React web a
 - **Recruiter/interviewer friendly architecture**: monorepo, reusable core package, worker threads, API boundaries, desktop packaging, test coverage, and modular UI.
 - **No vendor lock-in**: deterministic analysis works without an AI provider; future AI integrations can be optional and provider-configurable.
 
+## Screenshots
+
+The screenshots below use the included sample microservices project for visual clarity. A real repository zip, `ProductAgent.zip`, was also analyzed through the server background-job flow and produced 144 analyzed files, 127 findings, 130 dependencies, and a persisted scorecard result.
+
+| Overview dashboard | Findings evidence |
+| --- | --- |
+| <img src="docs/assets/screenshots/overview-sample.png" alt="AI Architecture Reviewer overview dashboard showing upload, architecture map, analysis progress, scorecard, and finding details" width="640"> | <img src="docs/assets/screenshots/findings-sample.png" alt="Findings page with anti-pattern table and selected finding evidence" width="640"> |
+
+| Architecture dependencies | Scorecard |
+| --- | --- |
+| <img src="docs/assets/screenshots/architecture-sample.png" alt="Architecture page showing inferred services, datastores, and dependency evidence" width="640"> | <img src="docs/assets/screenshots/scorecard-sample.png" alt="Architecture scorecard page with quality dimensions, risk summary, and recommendations" width="640"> |
+
 ## Product Capabilities
 
 ### Upload and Analyze
